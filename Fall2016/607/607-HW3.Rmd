@@ -1,0 +1,58 @@
+---
+title: "607-HW3"
+author: "Joseph Elikishvili"
+date: "September 19, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+```
+
+##### 3a.
+
+```{r}
+raw.data <-"555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5553642Dr. Julius Hibbert" 
+names = unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+names1 = gsub("\\w+\\.", "", names)
+namesfinal=gsub("\\,", "", names1)
+namesfinal
+```
+
+##### 3b
+
+```{r}
+str_detect(names, "(Rev.|Dr.)")
+```
+
+##### 3c
+
+```{r}
+str_detect(names, "[:upper:]\\.")
+```
+
+##### 4
+
+a. String ending with 1 or more digits.  Examples: 1, 1234, apple12
+b. String with 1-4 letters at the edges of the string.  Example: ab, abcd, ab12345678ed.
+c. String that has ( but doesn;t have to )  any number of any characters, so pretty much anything, followed by a .txt and has to end in .txt. The potential use is to grep for any filename of txt extention. Examples: .txt 1.txt abcd.txt
+d. String startung with 2 numbers, followed by a slash, 2 numbers and a 4 numbers. ExAmple: 01/12/2016
+e. String starts with <, followed by 1 or more any characters and followed by >, then by one or more any characters followed by repeat of the first </x> where x is the match in the first set of brackets. Potentialy it detects XML statements <open>statement</open>.  Examples: <html>test</html>
+
+##### 9 
+
+To solve this problem, we remove from the original strings a) low case letters b)Digits c)\n d)replace . with a space.
+
+```{r}
+string = "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0Tanwo
+Uwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigO
+d6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5
+fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+
+string1 = gsub("[a-z]", "", string)
+string2 = gsub("[0-9]", "", string1)
+string3 = gsub("\n", "", string2)
+string4 = gsub("\\.", " ", string3)
+string4
+```
