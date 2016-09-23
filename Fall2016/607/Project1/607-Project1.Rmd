@@ -1,0 +1,91 @@
+---
+title: "607-Project1"
+author: "Joseph Elikishvili"
+date: "September 22, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+library(stringr)
+```
+
+#### Project overview
+
+In this project, you're given a text file with chess tournament results where the information has some structure. Your
+job is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database)
+with the following information for all of the players:
+Player's Name, Player's State, Total Number of Points, Player's Pre-Rating, and Average Pre Chess Rating of Opponents
+For the first player, the information would be:
+Gary Hua, ON, 6.0, 1794, 1605
+1605 was calculated by using the pre-tournament opponents' ratings of 1436, 1563, 1600, 1610, 1649, 1663, 1716, and
+dividing by the total number of games played.
+
+
+```{r}
+#Reading the file
+tournament = readLines('tournamentinfo.txt')
+```
+
+Below we read the file and parse it to extract the data we need. I decided to run 2 regex statements one per line and have 2 data frames and combine them in the end to get the data I need.
+
+```{r}
+#Regex to read the 1st line starting with Player number.
+t=unlist(str_match(tournament, "(\\d+)\\s\\|\\s*(\\w+\\s\\w+\\s?\\w*?\\W?\\s?\\w*?)\\s*\\|(\\d\\.\\d)\\s+\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|[A-Z]\\s+(\\d*)\\|"))
+#Regex to read 2nd line starting with State
+t1=unlist(str_match(tournament, "([A-Z]{2}).*\\:\\s+(\\d*)\\w?.*\\s"))
+
+#Getting rid of lines with NA
+t=t[!(rowSums(is.na(t))),]
+t1=t1[!(rowSums(is.na(t1))),]
+
+#stringsAsFactors = FALSE
+t=data.frame(t, stringsAsFactors = FALSE)
+t1=data.frame(t1, stringsAsFactors = FALSE)
+
+#Removing the first column
+t$X1 <- NULL
+t1$X1 <- NULL
+
+#Nameing the dataframe columns
+names(t) = c("pnum","name","points","game1","game2","game3","game4","game5","game6","game7")
+names(t1) =c("state","prescore")
+head(t)
+head(t1)
+```
+
+Next we convert the data into numeric data type in order to perform calculations and have a for loop that goes through each player and calculates the average opponents pregame score.
+
+```{r}
+#converting to numeric
+t$game1=as.numeric(as.character(t$game1))
+t$game2=as.numeric(as.character(t$game2))
+t$game3=as.numeric(as.character(t$game3))
+t$game4=as.numeric(as.character(t$game4))
+t$game5=as.numeric(as.character(t$game5))
+t$game6=as.numeric(as.character(t$game6))
+t$game7=as.numeric(as.character(t$game7))
+t1$prescore=as.numeric(as.character(t1$prescore))
+
+#looping through and calculating the avg.
+for (x in 1:64)
+{
+  t$mean[x]=round(mean(c(t1[t[x,4],2],t1[t[x,5],2],t1[t[x,6],2],t1[t[x,7],2],t1[t[x,8],2],t1[t[x,9],2],t1[t[x,10],2]), na.rm=TRUE), digits=0)
+}
+```
+
+Next we create the final data frame which will hold all the required columns from 2 data frames and then we save the dataframe into a file called tournament_scores.csv and then read the fila and display it.
+
+```{r}
+#Creating the final dataframe and naming tghe columns
+final = cbind.data.frame(t$name,t1$state,t$points,t1$prescore,t$mean)
+names(final) =c("Player_Name","State","Points","Pre_score","AvgPnt_score")
+
+#Trimming the trailing whitespace
+final$Player_Name=trimws(final$Player_Name)
+
+#Write, read and display the file.
+write.csv(final, "tournament_scores.csv", row.names=FALSE)
+readfile = read.csv("tournament_scores.csv")
+head(readfile)
+```
