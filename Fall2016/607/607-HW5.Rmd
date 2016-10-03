@@ -1,0 +1,75 @@
+---
+title: "Assignment 5"
+author: "Joseph Elikishvili"
+date: "October 2, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+```
+
+## Assignment - Tidying and Transforming Data
+
+The chart above describes arrival delays for two airlines across five destinations. Your task is to:
+
+(1) Create a .CSV file (or optionally, a MySQL database!) that includes all of the information above.
+You're encouraged to use a "wide" structure similar to how the information appears above, so
+that you can practice tidying and transformations as described below.
+
+(2) Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy
+and transform your data.
+
+(3) Perform analysis to compare the arrival delays for the two airlines.
+
+(4) Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative
+descriptions of your data cleanup work, analysis, and conclusions
+
+```{r}
+#reading .csv file
+airlines = read.csv('airlines.csv', header = TRUE, sep = ",")
+
+#eliminating empty row
+airlines=airlines[!(rowSums(is.na(airlines))),]
+
+#Populating empty airline cells
+airlines[2,1] = "ALASKA"
+airlines[4,1] = "AM WEST"
+
+#tidying things up
+airlines1 = gather(airlines, city, freq, Los.Angeles:Seattle)
+airlines2 = spread(airlines1, X.1, freq)
+names(airlines2)[1] = 'airlines'
+tbl_df(airlines2)
+
+```
+
+### Calculating the ratio of delayed flights
+
+
+```{r}
+#Calculating and adding a column with delay proportions per destination
+finaldata = mutate(airlines2, delayratio = round(delayed/(delayed+`on time`),digits=2))
+tbl_df(finaldata)
+
+#Calculating total delay proportions per airline
+finaldata %>% group_by(airlines) %>% summarise(Totaldelayed = sum(delayed), Totalontime=sum(`on time`)) %>% mutate(TdelayRatio = round(Totaldelayed/(Totaldelayed+Totalontime),digits=2))
+```
+
+### Plotting the delay ratios for both airlines
+
+
+```{r}
+p=ggplot(finaldata,aes(x=city,y=delayratio,fill=airlines))+geom_bar(stat="identity",position="dodge")
+ggplotly(p)
+```
+
+### Conclusion
+
+If we compare the ratio of the total number of delayed flights, we can see that AM WEST has 11% of delays vs 13% by ALASKA airline.  But if we take a look at a plot of individual locations, we see that ALASKA actually has a lower delay for each of the destinations.  It is puzzling at first but if we take a look at Pheonix destination, we see that it actually makes up for over 75% (4840/6438) of all their flights and has a ratio of 0.08 which is below their average ratio of 0.11. In fact other destinations have much higher delay ratios then then the average 0.11. So, it appears that the Phoenex location skews the average and pushes overal number below the average delays of ALASKA airlines. The wikipida page (https://en.wikipedia.org/wiki/America_West_Airlines) mentions that Phoenex is the main hub for AM West and that potentially explains the relitevely low delay rate and the relatively high number of overal flights.
+
+So, in conclusion to make a decision based on the data we have, we can conclude that ALASKA airlines is a better choice for traveling to the above mentioned destinations since ALASKA airlines has lower delay ratios for every single destination. 
