@@ -1,0 +1,147 @@
+---
+title: "607-Project2"
+author: "Joseph Elikishvili"
+date: "October 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
+library(plotly)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(Quandl)
+```
+
+## Dataset 1
+
+For the Dataset 1 I decided to use the following source: "SOURCE: U.S. Census Bureau, Current Population Survey, Annual Social and Economic Supplement, 2012." publicly available at "http://www.census.gov/population/age/data/files/2012/2012gender_table17.csv"
+
+There a lot of tyding that needs to be done on the data before an analysis can be performed, so the dataset made a good candidate for this project.  For the analysis part, I wanted to compare income between males and females in different income categories.
+
+```{r}
+data = read.csv('http://www.census.gov/population/age/data/files/2012/2012gender_table17.csv', header = TRUE, sep = ",")
+
+both = data[ c(5:18), ]
+both = subset(both, select = -c(X,X.1,X.3,X.5,X.7,X.7,X.9,X.11,X.13,X.15,X.17,X.19,X.21))
+both = both[ c(4:14), ]
+colnames(both) = c("Age", "Under $5,000", "$5,000 to $9,999","$10,000 to $14,999","$15,000 to $19,999","$20,000 to $24,999","$25,000 to $34,999","$35,000 to $49,999","$50,000 to $74,999","$75,000 to $99,999","$100,000 and over")
+bothtidy = gather(both, Category, Number, 2:11)
+
+
+male = data[ c(21:31), ]
+male = subset(male, select = -c(X,X.1,X.3,X.5,X.7,X.7,X.9,X.11,X.13,X.15,X.17,X.19,X.21))
+colnames(male) = c("Age", "Under $5,000", "$5,000 to $9,999","$10,000 to $14,999","$15,000 to $19,999","$20,000 to $24,999","$25,000 to $34,999","$35,000 to $49,999","$50,000 to $74,999","$75,000 to $99,999","$100,000 and over")
+maletidy = gather(male, Category, Number, 2:11)
+
+
+#remove comas from numbers and concert to numeric
+maletidy$Number = as.numeric(unlist(lapply( strsplit(maletidy$Number,","),paste, collapse="")))
+
+#Convert NA to 0
+maletidy[is.na(maletidy)] <- 0
+
+maletotal=sum(maletidy$Number)
+
+malegrouped = maletidy %>% group_by(Category) %>% summarise(Totalbyage = sum(Number)) %>% mutate(Ratio = round(Totalbyage/maletotal,digits=3))
+
+
+
+female = data[ c(34:44), ]
+female = subset(female, select = -c(X,X.1,X.3,X.5,X.7,X.7,X.9,X.11,X.13,X.15,X.17,X.19,X.21))
+colnames(female) = c("Age", "$0-5K", "$05-10K","$10-15K","$15-20K","$20-25K","$25-35K","$35-50K","$50-75K","$75-100K","$99,999+")
+femaletidy = gather(female, Category, Number, 2:11)
+
+#remove comas from numbers and concert to numeric
+femaletidy$Number = as.numeric(unlist(lapply( strsplit(femaletidy$Number,","),paste, collapse="")))
+
+#Convert NA to 0
+femaletidy[is.na(femaletidy)] <- 0
+
+femaletotal=sum(femaletidy$Number)
+
+femalegrouped = femaletidy %>% group_by(Category) %>% summarise(Totalbyage = sum(Number)) %>% mutate(Ratio = round(Totalbyage/femaletotal,digits=3))
+
+femaletidy$male = maletidy$Number
+
+
+
+#grouping male and female DF
+femaletidy$male = maletidy$Number
+
+grouped = femaletidy %>% group_by(Category) %>% summarise(TotalbyageF = sum(Number), TotalbyageM = sum(male)) %>% mutate(Females = round(TotalbyageF/femaletotal,digits=3), Males = round(TotalbyageM/maletotal,digits=3))
+final = gather(grouped, Sex, Ratio, 4:5)
+p=ggplot(final,aes(x=Category,y=Ratio,fill=Sex))+geom_bar(stat="identity",position="dodge")+ggtitle("Earnings of Full-Time by Sex: 2011")
+ggplotly(p)
+
+```
+
+###Conclusion
+If we take a look at the final histogram we can see that females are leading in the lower end categories going up to 50-75K category, at that point the ratio of males increases and keeps going higher as the Salary range increases. So we can conclude based on this dataset that females on average are making less than males and are leading in jobs that pay up to $50,000/year.
+
+
+## Dataset 2
+
+For the second dataset I decided to use Emergency 911 calls posted on kaggle:  https://www.kaggle.com/mchirico/montcoalert. I am interested in seeing what is the reason for the most frequent calls to 911. It involves splitting one of the columns into 2 as part of the tyding process.
+
+
+
+```{r}
+calls = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2016/607/Project2/911.csv",header = TRUE, sep = ",")
+temp = separate(calls, title, into = c('reason','details'),  sep = ":")
+categories = table(temp$reason)
+categories = as.data.frame(categories)
+colnames(categories) = c("Region","TotalNumber")
+
+#Categories plot
+p=ggplot(categories,aes(x=Region,y=TotalNumber))+geom_bar(stat="identity",position="dodge",fill="darkgreen")+ggtitle("911 calls by category")
+ggplotly(p)
+
+#emsgrouped = temp %>% subset(reason=='EMS')
+a = table(temp$details)
+a = as.data.frame(a)
+a2=a[order(-a$Freq),]
+a3=a2[1:20,]
+colnames(a3) = c("Region","TotalNumber")
+
+#Top 20 plot
+p=ggplot(a3,aes(x=Region,y=TotalNumber))+geom_bar(stat="identity",position="dodge",fill="maroon")+ggtitle("Top 20 reasons of 911 calls")+ coord_flip()
+ggplotly(p)
+```
+
+### Conclusion
+
+We can see from the first histogram that EMS related calls are the most frequent. The second histogram is showing the top 20 reasons of 911 calls.
+
+
+## Dataset 3
+
+For the dataset 3 I decided to use a dataset from Quandl(great source for financial data) showing the average prices of houses from 2010 to 2015 by regions. The data is in wide format and will need to be transformed to the long format. I am interested to see the dynamic of home price changes across the regions and to see investment into which region on average had the biggest returns.
+
+```{r}
+houses = Quandl::Quandl("NAR/HOME_SFAM_PRICES_AVERAGE", api_key="bbTgtZsTREfs3EDzYtj7", transform="rdiff")
+housesdiff = Quandl::Quandl("NAR/HOME_SFAM_PRICES_AVERAGE", api_key="bbTgtZsTREfs3EDzYtj7", transform="diff")
+housesval = Quandl::Quandl("NAR/HOME_SFAM_PRICES_AVERAGE", api_key="bbTgtZsTREfs3EDzYtj7")
+
+houses_tidy = gather(houses, Location, AVGPrice, 2:6)
+housesdiff_tidy = gather(housesdiff, Location, Change, 2:6)
+housesval_tidy = gather(housesval, Location, Price, 2:6)
+
+grouped =  houses_tidy %>% group_by(Location) 
+groupeddiff =  housesdiff_tidy %>% group_by(Location) %>% summarise(TotalChange = sum(Change)) 
+houses2010 = subset(housesval_tidy, Year=="2010-12-31")
+
+housesfinal = merge(houses2010, groupeddiff, by="Location")
+housesfinal = housesfinal %>% mutate(Totalpercent = TotalChange/Price)
+
+p=ggplot(grouped,aes(x=Year,y=AVGPrice,fill=Location))+geom_bar(stat="identity",position="dodge")+ggtitle("Change of Avergae House prices 2010-2015")
+ggplotly(p)
+
+p=ggplot(housesfinal,aes(x=Location,y=Totalpercent))+geom_bar(stat="identity",position="dodge",fill = "#0072B2")+ggtitle("Return on investment 2010-2015")
+ggplotly(p)
+```
+
+### Conlcusion
+
+We can see from the first histogram the dynamic of price changes for the period of 2010-2015.  We can see that prices have been moving up across all regions on average, but we can also see that West has been leading in several years.  We still want to check the actual return on the overall investment over the entire period of time to do that we sum up the overall change in prices and calculate the overall percentage change.  The second histogram depicts the results. We can safely conclude that investment into the real estate in West region on average performed better than other regions.
