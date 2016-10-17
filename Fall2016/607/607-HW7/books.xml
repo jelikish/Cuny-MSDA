@@ -1,0 +1,20 @@
+<document>
+	<book>
+		<title>The Hitchhiker's Guide to the Galaxy</title>
+		<Author>Douglas Adams</Author>
+		<pages>600</pages>
+		<amazon>4.4</amazon>
+	</book>
+	<book>
+		<title>Ender's Game</title>
+		<Author>Orson Scott Card</Author>
+		<pages>700</pages>
+		<amazon>4.6</amazon>
+	</book>
+	<book>
+		<title>The Dark Tower I</title>
+		<Author>Stephen King,Bing Bong</Author>
+		<pages>800</pages>
+		<amazon>4.2</amazon>
+	</book>
+</document>

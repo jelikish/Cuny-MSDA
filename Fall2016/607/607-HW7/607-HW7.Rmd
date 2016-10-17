@@ -1,0 +1,50 @@
+---
+title: "607-HW7"
+author: "Joseph Elikishvili"
+date: "October 16, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+```
+
+## HTML
+
+```{r}
+library(XML)
+url = "c:/data/books.html"
+htmlbooks = readHTMLTable(url,stringsAsFactors = FALSE)
+htmlbooks.df = as.data.frame(htmlbooks)
+colnames(htmlbooks.df) = c("Book Title","Author","Pages","Amazon Stars")
+kable(htmlbooks.df)
+```
+
+## XML
+
+```{r}
+xml = "c:/data/books.xml"
+xmlbook = xmlParse(xml)
+root = xmlRoot(xmlbook)
+xmlbooks.df = xmlToDataFrame(root)
+colnames(xmlbooks.df) = c("Book Title","Author","Pages","Amazon Stars")
+kable(xmlbooks.df)
+```
+
+## JSON
+
+```{r}
+library(jsonlite)
+library(plyr)
+json = "c:/data/books.json" 
+jsonbooks = fromJSON(json)
+jsonbooks.unlist <- sapply(jsonbooks[[1]], unlist)
+jsonbooks.unlist[[2]][[3]]=paste(jsonbooks.unlist[[2]][[3]],",",jsonbooks.unlist[[2]][[4]])
+jsonbooks.unlist[[2]] = list(jsonbooks.unlist[[2]][[1]],jsonbooks.unlist[[2]][[2]],jsonbooks.unlist[[2]][[3]])
+jsonbooks.df <- do.call("rbind.fill", lapply(lapply(jsonbooks.unlist, t), data.frame, stringsAsFactors = FALSE))
+jsonbooks.df = t(jsonbooks.df)
+jsonbooks.df = as.data.frame(jsonbooks.df)
+colnames(jsonbooks.df) = c("Book Title","Author","Pages","Amazon Stars")
+kable(jsonbooks.df)
+```

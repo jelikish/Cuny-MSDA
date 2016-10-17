@@ -1,0 +1,20 @@
+{"my books" :[
+	{
+	"title" : "The Hitchhiker's Guide to the Galaxy",
+	"Author" : "Douglas Adams",
+	"pages" : 600,
+	"amazon" : 4.4
+	},
+	{
+	"title" : "Ender's Game",
+	"Author" : "Orson Scott Card",
+	"pages" : 700,
+	"amazon" : 4.6
+	},
+	{
+	"title" : "The Dark Tower I",
+	"Author" : ["Stephen King","Bing Bong"],
+	"pages" : 800,
+	"amazon" : 4.2
+	}]
+}
