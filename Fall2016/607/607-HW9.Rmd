@@ -1,0 +1,44 @@
+---
+title: "607-HW9"
+author: "Joseph Elikishvili"
+date: "October 28, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(knitr)
+```
+
+## The New York Times API
+
+The New York Times web site provides a rich set of APIs, as described here: http://developer.nytimes.com/docs
+You'll need to start by signing up for an API key.
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and
+transform it to an R dataframe.
+
+### Accessing Top stories
+
+
+```{r}
+
+api = "&api-key=d6063d0168754a29a97e8b29352a43a1"
+url = "https://api.nytimes.com/svc/topstories/v2/home.json?sectionresponse_format"
+data = fromJSON(paste0(url, api))
+
+toparticles = as.data.frame(data$results)
+top_subset = toparticles[, c("title", "abstract", "url", "section")]
+kable(top_subset)
+```
+
+### Accessing Article Search API and searching for "big data"
+
+
+```{r}
+url_search = "https://api.nytimes.com/svc/search/v2/articlesearch.json?q=big+data"
+data_search <- fromJSON(paste0(url_search, api))
+search_articles = as.data.frame(data_search$response$docs)
+search_subset = search_articles[, c("snippet", "lead_paragraph", "web_url")]
+kable(search_subset)
+```
