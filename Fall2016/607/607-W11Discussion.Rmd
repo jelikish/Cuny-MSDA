@@ -1,0 +1,34 @@
+---
+title: "607-Discussion11"
+author: "Joseph Elikishvili"
+date: "November 11, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## ebay.com
+
+### Scenario analysis
+
+1. Who are your target users? -
+visitors of ebay.com looking to purchase gifts and various items
+
+2. What are their key goals? -
+Find items that are cheaper than in brick and mortar stores and find some unique items not available elsewhere
+
+3. How can you help them achieve their goal? -
+Ebay shows related items that are similar to the item the user is looking for.
+
+
+### Reverse engineer
+
+After performing multiple searches, it appears the ebay algorithm is looking for items with similar search keywords. The algorithm is successful in a lot of cases, but does miss to identify the desired item at times.  The algorithm seems to breaking up the search words and suggests items based on that for example a search for bicycle for 4 year old, suggests toys and clothing for 4 year olds as well, so the algorithm has taken bicycles and4 year old as separate search terms and gives suggestion for 4 year olds in general, which is a step in a right direction I think.  Sometimes however it hurts the results, for example a search for "melisa and doug" (company makes toys for children ) returns the correct products as results, but the suggested alternatives fail as they look for melisa, doug separately and return items completely unrelated to what the user is looking for. However this is not always the effect for example a search for "south park" does not split up the term and only returns suggestions based on both words which works as expected.  So based on that I believe that they are using some sort of vocabulary which contains terms such as south park, but misses some of them which are not in the list.
+
+
+### Recommendations
+
+I think the current recommender system is beneficial to have and could generate extra clicks which will result in extra final sales, but I think it is very limited. I would recommend to add some sort of algorithm which takes into consideration the results displayed as well as the keywords used. So in the example with "melisa and doug" the system should understand based on the results that the user is looking for educational toys and suggest the toys not only based on keywords but based on the content. Another example is a search for "Toyota Camry" the only suggestions that currently show up are based on Toyota and Camry. Once again if we analyze the content we will understand that the user is looking for a sedan in a specific price range, so it possible a Honda accord would be something the user might be interested in. 
+
+If the idea is to generate more sales, I think it is important to expand the offering and show the user items they did not think of rather than suggesting items based on the same results that they are looking at right now.  I think this is something Amazon does very successfully and I find myself clicking on items that I did not look for but they are interesting to me and I think by analyzing the content of results eBay could be one step closer to those results.
