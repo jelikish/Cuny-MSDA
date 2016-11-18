@@ -1,0 +1,101 @@
+---
+title: "607-Project4"
+author: "Joseph Elikishvili"
+date: "November 17, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RSQLite)
+library(RMySQL)
+library(RNeo4j)
+```
+
+#### Connecting to Mysql DB, running a join sql statement and saving results to flights.df
+
+```{r}
+rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.7/my.ini"
+con <- dbConnect(RMySQL::MySQL(), default.file=rmysql.settingsfile, dbname = "flights", username=NULL, password=NULL)
+sql <- "SELECT flights.flight, flights.origin, flights.dest, airports.name from flights JOIN airports on flights.dest = airports.faa;"
+flights.df <- dbGetQuery(con, sql)
+head(flights.df)
+```
+
+#### Tyding data
+
+```{r}
+#taking 50 records to work with
+flights.df = flights.df[1:50,]
+
+#subsetting airport data
+airports.df = subset(flights.df, select=c("dest","origin", "name"))
+
+#stacking airports from destination and origin into one column
+stack = stack(airports.df[1:2])
+
+#removing dublicate airports
+airports.df = unique(stack)
+```
+
+
+#### Connecting to Neo4j
+
+```{r}
+neo = startGraph("http://localhost:7474/db/data/", username="neo4j", password="password")
+clear(neo, input=FALSE)
+
+# Creating and uploading airports to neo4j
+airport_q <- "CREATE (n1:Airport {name: {name}})"
+t = newTransaction(neo)
+for (i in 1:nrow(airports.df)) 
+{
+  name = airports.df$values[i]
+  appendCypher(t, airport_q,  name = name)
+}
+commit(t)
+
+
+#Creating and uploading flights to Neo4j
+flight_q <- "CREATE (n2:Flights {label: {flight}, origin: {origin}, dest: {dest}})"
+t1 = newTransaction(neo)
+for (i in 1:nrow(flights.df)) 
+{
+  flight = flights.df$flight[i]
+  origin = flights.df$origin[i]
+  dest = flights.df$dest[i]
+  appendCypher(t1, flight_q, flight = flight, origin = origin, dest = dest)
+}
+commit(t1)
+
+#Creating a Destination link between Airports and flights
+destination_q = "
+MATCH (a:Airport),(b:Flights)
+WHERE a.name = b.dest
+CREATE (b)-[r:Destination]->(a)"
+
+t2 = newTransaction(neo)
+appendCypher(t2, destination_q)
+commit(t2)
+
+
+#Creating an Origin link between Airports and Floghts
+origin_q = "MATCH (a:Airport),(b:Flights)
+WHERE a.name = b.origin
+CREATE (a)-[r:Origin]->(b)"
+
+t3 = newTransaction(neo)
+appendCypher(t3, origin_q)
+commit(t3)
+```
+
+
+
+![The following is the image saved from neo4j console is a result of "match(n) return(n)" query ](/data/graph.png)
+
+
+#### Advantages and Disadvantages of Nosql vs SQL
+
+Nosql is better scalable then SQL. Nosql has dynamic schemas meaning information can be added on the fly, where with SQL things are more static. SQL is using a table model to store data and NoSQL is using a graph or document models.
+
+NoSQL is a better choice for larger projects as it can clearly scale better, also it has an adventage of speed so whenever performance is an issue NoSQL will be a winner. It is great for building relationships so projects that need to build and analyze relationships between nodes will benefit greatly from NoSQL. Also data that is constantly changing will be better handled with NoSQL.  If there is no need for features listed above, SQL could be a better choice for standart IT needs such as back end data storage for applications when it is clear that there will be no analysis needed to be performed on the data. It is also easier to support and is a much more mature technology so it will have a place in IT for some time. 
