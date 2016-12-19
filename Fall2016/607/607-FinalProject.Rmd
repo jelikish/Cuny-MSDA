@@ -1,0 +1,1458 @@
+---
+title: "607-FinalProject"
+author: "Joseph Elikishvili"
+date: "December 18, 2016"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: united
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+## Introduction
+
+For my final project I decided to test a potential trading strategy idea I had in regards to stock market. The strategy involves following the short interest list and initiating trades based on that list. The short interest list is released byweekly and shows how many shares are curenlt held short vs shares outsdandning for the particular stock. So the idea is to folow the list and detect the large changes in the shares outstanding to see if that is a good indicator of where the stock will move in the near term. For this study I decided to do the following: Find the 25 stocks with the largest positive change in percentage of shares shorted and 25 largest declines.  Calculate the perfornce of the stock in a suggested direction for 1 week and 2 weeks. Perform the above for all 21 reports and test it vs the Index.  I this study I decided to only use NASDAQ stocks, so we will be testing teh relative performance vs QQQ ETF which tracks NASDAQ Composite Index.
+
+Finding the data turned out to be harder then I anticipated. I ended up signing up for a service which promissed to have the the short lists available: http://WallStreetCourier.com. It turned out they only have hiostorical data, so I was able to obtain data for 2015-01-15 to 2015-11-13 which includes 21 byweekly reports and  represents almost a full year. For the purposes of this study I decided that data is sufficient.  The reports were converted to csv format and locaded into R. 
+
+We will need market data to test the theory and I will be using quandmod library which pulls data from yahoo finance, google finance and other sources:  http://www.quantmod.com/
+
+## Data Preperation
+
+```{r}
+#Read all .csv files the directory and store result in datafreames each dataframe will have a name of the date of the report: 2015_01_15
+
+path <- "C:/Users/joseph/Downloads/Short Interest/NASDAQ 2015/"
+files <- list.files(path=path, pattern="*.csv")
+for(file in files)
+{
+  perpos <- which(strsplit(file, "")[[1]]==".")
+  assign(
+    gsub(" ","",substr(file, 1, perpos-1)), 
+    read.csv(paste(path,file,sep=""), stringsAsFactors = FALSE))
+}
+
+#View the first
+library(knitr)
+kable(head(`2015_01_15`))
+```
+
+
+
+Next we will setup a callendar function which will return a next busienss day, Order the dataframes by the percentage of float changes and create new dataframes holding top and bottom 25 results for each of the reports and finally download the market data for QQQ stock.
+```{r}
+library(tools)
+DFs = file_path_sans_ext(list.files(path=path, pattern = "*.csv"))
+
+library(TTR)
+tickersList <- stockSymbols()
+
+library(quantmod)
+library(timeDate)
+library(data.table)
+
+#Setup a callendar function. it is called with a date string and number of business-days to offset and returns the coresponding date as a string.
+#http://stackoverflow.com/questions/20709654/add-1-business-day-to-date-in-r
+calfunction <- function(buydate, days)
+{
+  cal <- data.table(date=seq(from=as.Date("2015-01-01"), by=1, length=365), key="date")
+  cal2 <- copy(cal)
+  cal2[,nextBizDay:=date+days]
+  cal2 <- cal2[isBizday(as.timeDate(nextBizDay)),]
+  cal <- cal2[cal,,roll=-Inf]
+  return(cal[cal$date == buydate]$nextBizDay)
+}
+
+#creating top and bottom dataframes
+#This was perfectly working in .R but not in .rmarkdown
+#for (i in 1:length(DFs))
+#{
+# assign(DFs[i], get(DFs[i])[order(get(DFs[i])$X..Float.Change),])
+# assign(paste0('bottom', DFs[i]), tail(get(DFs[i]),25) )
+# assign(paste0('top', DFs[i]), head(get(DFs[i]),25) )
+#}
+
+
+`2015_01_15`=`2015_01_15`[order(`2015_01_15`$X..Float.Change),]
+bottom2015_01_15 = tail(`2015_01_15`,25)
+top2015_01_15 = head(`2015_01_15`,25)
+
+`2015_01_30`=`2015_01_30`[order(`2015_01_30`$X..Float.Change),]
+bottom2015_01_30 = tail(`2015_01_30`,25)
+top2015_01_30 = head(`2015_01_30`,25)
+
+`2015_02_13`=`2015_02_13`[order(`2015_02_13`$X..Float.Change),]
+bottom2015_02_13 = tail(`2015_02_13`,25)
+top2015_02_13 = head(`2015_02_13`,25)
+
+`2015_02_27`=`2015_02_27`[order(`2015_02_27`$X..Float.Change),]
+bottom2015_02_27 = tail(`2015_02_27`,25)
+top2015_02_27 = head(`2015_02_27`,25)
+
+`2015_03_15`=`2015_03_15`[order(`2015_03_15`$X..Float.Change),]
+bottom2015_03_15 = tail(`2015_03_15`,25)
+top2015_03_15 = head(`2015_03_15`,25)
+
+`2015_03_31`=`2015_03_31`[order(`2015_03_31`$X..Float.Change),]
+bottom2015_03_31 = tail(`2015_03_31`,25)
+top2015_03_31 = head(`2015_03_31`,25)
+
+`2015_04_15`=`2015_04_15`[order(`2015_04_15`$X..Float.Change),]
+bottom2015_04_15 = tail(`2015_04_15`,25)
+top2015_04_15 = head(`2015_04_15`,25)
+
+`2015_04_30`=`2015_04_30`[order(`2015_04_30`$X..Float.Change),]
+bottom2015_04_30 = tail(`2015_04_30`,25)
+top2015_04_30 = head(`2015_04_30`,25)
+
+`2015_05_15`=`2015_05_15`[order(`2015_05_15`$X..Float.Change),]
+bottom2015_05_15 = tail(`2015_05_15`,25)
+top2015_05_15 = head(`2015_05_15`,25)
+
+`2015_05_29`=`2015_05_29`[order(`2015_05_29`$X..Float.Change),]
+bottom2015_05_29 = tail(`2015_05_29`,25)
+top2015_05_29 = head(`2015_05_29`,25)
+
+`2015_06_15`=`2015_06_15`[order(`2015_06_15`$X..Float.Change),]
+bottom2015_06_15 = tail(`2015_06_15`,25)
+top2015_06_15 = head(`2015_06_15`,25)
+
+`2015_06_30`=`2015_06_30`[order(`2015_06_30`$X..Float.Change),]
+bottom2015_06_30 = tail(`2015_06_30`,25)
+top2015_06_30 = head(`2015_06_30`,25)
+
+`2015_07_15`=`2015_07_15`[order(`2015_07_15`$X..Float.Change),]
+bottom2015_07_15 = tail(`2015_07_15`,25)
+top2015_07_15 = head(`2015_07_15`,25)
+
+`2015_07_31`=`2015_07_31`[order(`2015_07_31`$X..Float.Change),]
+bottom2015_07_31 = tail(`2015_07_31`,25)
+top2015_07_31 = head(`2015_07_31`,25)
+
+`2015_08_14`=`2015_08_14`[order(`2015_08_14`$X..Float.Change),]
+bottom2015_08_14 = tail(`2015_08_14`,25)
+top2015_08_14 = head(`2015_08_14`,25)
+
+`2015_08_31`=`2015_08_31`[order(`2015_08_31`$X..Float.Change),]
+bottom2015_08_31 = tail(`2015_08_31`,25)
+top2015_08_31 = head(`2015_08_31`,25)
+
+`2015_09_15`=`2015_09_15`[order(`2015_09_15`$X..Float.Change),]
+bottom2015_09_15 = tail(`2015_09_15`,25)
+top2015_09_15 = head(`2015_09_15`,25)
+
+`2015_09_30`=`2015_09_30`[order(`2015_09_30`$X..Float.Change),]
+bottom2015_09_30 = tail(`2015_09_30`,25)
+top2015_09_30 = head(`2015_09_30`,25)
+
+`2015_10_15`=`2015_10_15`[order(`2015_10_15`$X..Float.Change),]
+bottom2015_10_15 = tail(`2015_10_15`,25)
+top2015_10_15 = head(`2015_10_15`,25)
+
+`2015_10_30`=`2015_10_30`[order(`2015_10_30`$X..Float.Change),]
+bottom2015_10_30 = tail(`2015_10_30`,25)
+top2015_10_30 = head(`2015_10_30`,25)
+
+`2015_11_13`=`2015_11_13`[order(`2015_11_13`$X..Float.Change),]
+bottom2015_11_13 = tail(`2015_11_13`,25)
+top2015_11_13 = head(`2015_11_13`,25)
+
+#get QQQ market data for benchmark
+getSymbols('QQQ', from="2015-01-01") 
+
+```
+
+
+Next we will process 2 dataframes top and bottom for each of the 21 stocks.  Since there are some modifications that need to be done such as checking the tickers for validity and removing expired tickers, we will have to run this per report and generate a lot of code.  
+
+Each block of code will do the following: Set buy date and sell dates ( 1week and 2 weeks), Check symbols for validity and if the symbols are valid, download market data for those symbols. Pull up the opwn prices of each stock for those dates and reord it to portfolio dataframe.  Next we will calculate PNL and record it to appropriate dataframes.
+
+
+```{r}
+# 2015-01-15 Long
+top2015_01_15<-top2015_01_15[!(top2015_01_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+long_pnl = data.frame()
+buydate = '2015-01-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_01_15) )                          
+{
+  if (any(grep(top2015_01_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_01_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_01_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_01_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_01_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_01_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-15 Short
+
+j = 1
+portfolio = data.frame() 
+short_pnl = data.frame()
+
+for (i in 1:length(bottom2015_01_15) )                          
+{
+  if (any(grep(bottom2015_01_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_01_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_01_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_01_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_01_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_01_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_01_30 Long
+
+top2015_01_30<-top2015_01_30[!(top2015_01_30$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-01-30'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_01_30) )                          
+{
+  if (any(grep(top2015_01_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_01_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_01_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_01_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_01_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_01_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_01_30) )                          
+{
+  if (any(grep(bottom2015_01_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_01_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_01_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_01_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_01_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_01_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_02_13 Long
+
+top2015_02_13<-top2015_02_13[!(top2015_02_13$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-02-13'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_02_13) )                          
+{
+  if (any(grep(top2015_02_13$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_02_13$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_02_13$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_02_13$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_02_13$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_02_13$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_02_13) )                          
+{
+  if (any(grep(bottom2015_02_13$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_02_13$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_02_13$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_02_13$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_02_13$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_02_13$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_02_27 Long
+
+top2015_02_27 = top2015_02_27[-1,]
+top2015_02_27<-top2015_02_27[!(top2015_02_27$Ticker=="ZU"),]
+
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-02-27'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_02_27) )                          
+{
+  if (any(grep(top2015_02_27$Ticker[i], tickersList$Symbol)))
+  {
+    #print(top2015_02_27$Ticker[i])
+    getSymbols(top2015_02_27$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_02_27$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_02_27$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_02_27$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_02_27$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_02_27) )                          
+{
+  if (any(grep(bottom2015_02_27$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_02_27$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_02_27$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_02_27$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_02_27$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_02_27$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_03_15 Long
+
+top2015_03_15<-top2015_03_15[!(top2015_03_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-03-16'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_03_15) )                          
+{
+  if (any(grep(top2015_03_15$Ticker[i], tickersList$Symbol)))
+  {
+    print(top2015_03_15$Ticker[i])
+    getSymbols(top2015_03_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_03_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_03_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_03_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_03_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_03_15) )                          
+{
+  if (any(grep(bottom2015_03_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_03_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_03_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_03_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_03_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_03_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_03_31 Long
+
+top2015_03_31<-top2015_03_31[!(top2015_03_31$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-03-31'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_03_31) )                          
+{
+  if (any(grep(top2015_03_31$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_03_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_03_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_03_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_03_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_03_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_03_31) )                          
+{
+  if (any(grep(bottom2015_03_31$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_03_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_03_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_03_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_03_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_03_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_04_15 Long
+
+top2015_04_15<-top2015_04_15[!(top2015_04_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-04-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_04_15) )                          
+{
+  if (any(grep(top2015_04_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_04_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_04_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_04_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_04_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_04_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_04_15) )                          
+{
+  if (any(grep(bottom2015_04_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_04_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_04_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_04_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_04_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_04_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_04_30 Long
+
+top2015_04_30<-top2015_04_30[!(top2015_04_30$Ticker=="ZU"),]
+bottom2015_04_30<-bottom2015_04_30[!(bottom2015_04_30$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-04-30'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_04_30) )                          
+{
+  if (any(grep(top2015_04_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_04_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_04_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_04_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_04_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_04_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_04_30) )                          
+{
+  if (any(grep(bottom2015_04_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_04_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_04_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_04_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_04_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_04_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_05_15 Long
+top2015_05_15<-top2015_05_15[!(top2015_05_15$Ticker=="SBLK"),]
+top2015_05_15<-top2015_05_15[!(top2015_05_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-05-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 11)
+
+for (i in 1:length(top2015_05_15) )                          
+{
+  if (any(grep(top2015_05_15$Ticker[i], tickersList$Symbol)))
+  {
+    print(top2015_05_15$Ticker[i])
+    getSymbols(top2015_05_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_05_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_05_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_05_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_05_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-05-15 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_05_15) )                          
+{
+  if (any(grep(bottom2015_05_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_05_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_05_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_05_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_05_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_05_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_05_29 Long
+
+top2015_05_29<-top2015_05_29[!(top2015_05_29$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-05-29'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_05_29) )                          
+{
+  if (any(grep(top2015_05_29$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_05_29$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_05_29$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_05_29$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_05_29$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_05_29$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-05-29 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_05_29) )                          
+{
+  if (any(grep(bottom2015_05_29$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_05_29$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_05_29$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_05_29$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_05_29$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_05_29$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_06_15 Long
+
+top2015_06_15<-top2015_06_15[!(top2015_06_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-06-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_06_15) )                          
+{
+  if (any(grep(top2015_06_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_06_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_06_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_06_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_06_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_06_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_06_15) )                          
+{
+  if (any(grep(bottom2015_06_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_06_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_06_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_06_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_06_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_06_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_06_30 Long
+
+top2015_06_30<-top2015_06_30[!(top2015_06_30$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-06-30'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_06_30) )                          
+{
+  if (any(grep(top2015_06_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_06_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_06_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_06_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_06_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_06_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_06_30) )                          
+{
+  if (any(grep(bottom2015_06_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_06_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_06_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_06_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_06_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_06_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_07_15 Long
+
+top2015_07_15<-top2015_07_15[!(top2015_07_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-07-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_07_15) )                          
+{
+  if (any(grep(top2015_07_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_07_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_07_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_07_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_07_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_07_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_07_15) )                          
+{
+  if (any(grep(bottom2015_07_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_07_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_07_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_07_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_07_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_07_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_07_31 Long
+
+top2015_07_31<-top2015_07_31[!(top2015_07_31$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-07-31'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_07_31) )                          
+{
+  if (any(grep(top2015_07_31$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_07_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_07_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_07_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_07_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_07_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_07_31) )                          
+{
+  if (any(grep(bottom2015_07_31$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_07_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_07_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_07_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_07_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_07_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_08_14 Long
+
+top2015_08_14<-top2015_07_31[!(top2015_08_14$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-08-14'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_08_14) )                          
+{
+  if (any(grep(top2015_08_14$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_08_14$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_08_14$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_08_14$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_08_14$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_08_14$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_08_14) )                          
+{
+  if (any(grep(bottom2015_08_14$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_08_14$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_08_14$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_08_14$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_08_14$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_08_14$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_08_31 Long
+
+top2015_08_31<-top2015_08_31[!(top2015_08_31$Ticker=="ZU"),]
+top2015_08_31<-top2015_08_31[!(top2015_08_31$Ticker=="REXX"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-08-31'
+selldate5 = calfunction(buydate, 8)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_08_31) )                          
+{
+  if (any(grep(top2015_08_31$Ticker[i], tickersList$Symbol)))
+  {
+    print(top2015_08_31$Ticker[i])
+    getSymbols(top2015_08_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_08_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_08_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_08_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_08_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_08_31) )                          
+{
+  if (any(grep(bottom2015_08_31$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_08_31$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_08_31$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_08_31$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_08_31$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_08_31$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_09_15 Long
+
+top2015_09_15<-top2015_09_15[!(top2015_09_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-09-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_09_15) )                          
+{
+  if (any(grep(top2015_09_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_09_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_09_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_09_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_09_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_09_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_09_15) )                          
+{
+  if (any(grep(bottom2015_09_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_09_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_09_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_09_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_09_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_09_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_09_30 Long
+
+top2015_09_30<-top2015_09_30[!(top2015_09_30$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-09-30'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_09_30) )                          
+{
+  if (any(grep(top2015_09_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_09_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_09_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_09_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_09_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_09_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_09_30) )                          
+{
+  if (any(grep(bottom2015_09_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_09_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_09_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_09_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_09_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_09_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_10_15 Long
+
+top2015_10_15<-top2015_10_15[!(top2015_10_15$Ticker=="LIVN"),]
+top2015_10_15<-top2015_10_15[!(top2015_10_15$Ticker=="NRX"),]
+top2015_10_15<-top2015_10_15[!(top2015_10_15$Ticker=="ZU"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-10-15'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_10_15) )                          
+{
+  if (any(grep(top2015_10_15$Ticker[i], tickersList$Symbol)))
+  {
+    print(top2015_10_15$Ticker[i])
+    getSymbols(top2015_10_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_10_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_10_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_10_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_10_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_10_15) )                          
+{
+  if (any(grep(bottom2015_10_15$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_10_15$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_10_15$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_10_15$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_10_15$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_10_15$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_10_30 Long
+
+top2015_10_30<-top2015_10_30[!(top2015_10_30$Ticker=="NRX"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-10-30'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_10_30) )                          
+{
+  if (any(grep(top2015_10_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_10_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_10_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_10_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_10_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_10_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_10_30) )                          
+{
+  if (any(grep(bottom2015_10_30$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_10_30$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_10_30$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_10_30$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_10_30$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_10_30$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+#####################################################################################################
+#2015_11_13 Long
+
+top2015_10_15<-top2015_11_13[!(top2015_11_13$Ticker=="NRX"),]
+
+j = 1
+portfolio = data.frame() 
+buydate = '2015-11-13'
+selldate5 = calfunction(buydate, 5)
+selldate10 = calfunction(buydate, 10)
+
+for (i in 1:length(top2015_11_13) )                          
+{
+  if (any(grep(top2015_11_13$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(top2015_11_13$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = top2015_11_13$Ticker[i]
+    portfolio[j,2] = as.numeric(get(top2015_11_13$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(top2015_11_13$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(top2015_11_13$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V3/portfolio$V2
+portfolio$net10 = portfolio$V4/portfolio$V2
+long_trades = rbind(long_trades, portfolio)
+
+long_pnl <- rbind(long_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+
+
+# 2015-01-30 Short
+
+j = 1
+portfolio = data.frame() 
+
+for (i in 1:length(bottom2015_11_13) )                          
+{
+  if (any(grep(bottom2015_11_13$Ticker[i], tickersList$Symbol)))
+  {
+    getSymbols(bottom2015_11_13$Ticker[i], from="2015-01-01") 
+    portfolio[j,1] = bottom2015_11_13$Ticker[i]
+    portfolio[j,2] = as.numeric(get(bottom2015_11_13$Ticker[i])[buydate,1])
+    portfolio[j,3] = as.numeric(get(bottom2015_11_13$Ticker[i])[selldate5,1])
+    portfolio[j,4] = as.numeric(get(bottom2015_11_13$Ticker[i])[selldate10,1])
+    j = j + 1
+  }
+}
+
+portfolio$net5 = portfolio$V2/portfolio$V3
+portfolio$net10 = portfolio$V2/portfolio$V4
+short_trades = rbind(short_trades, portfolio)
+
+short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$net5)/(nrow(portfolio)), "net10"=sum(portfolio$net10)/(nrow(portfolio)), "NASDAQ5" = as.numeric(get("QQQ")[selldate5,1])/as.numeric(get("QQQ")[buydate,1]), "NASDAQ10" = as.numeric(get("QQQ")[selldate10,1])/as.numeric(get("QQQ")[buydate,1])))
+```
+
+
+## Data Analisys
+
+As a result of data preperation we have the following datasets: long_pnl, short_pnl, trades_long and trades_short. Long and short pnl contains overal performance of the strategy per report so each has 21 entries. trades long and short contain all individual trades and performance for long and short strategy respectively.
+
+```{r}
+kable(head(`long_pnl`))
+kable(head(`long_trades`))
+```
+
+Next we can look at 4 histograms and validate the data collected.  We will take a look at long performance for 1 week and 2 weeks and short performance for 1 week and 2 weeks(net5 = 1 week, net10 = 2 weeks) The center of histogram is at 1, so for example, 1.05 represents a 5 % gain and 0.95 represents a 5% loss for each of the trades.
+
+```{r}
+hist(short_trades$net5)
+hist(long_trades$net5)
+hist(short_trades$net10)
+hist(long_trades$net10)
+```
+
+### t-test
+
+For net10 the data distribution appears to be pretty close to normal. net5 has a data skewed, but since we have n>30 we can proceed with the test. It should be noted that the data is not inependent and was collected based on the specific selection, but we can go ahead with the test for this study.
+
+We will setup the following Hypotheses for 4 tests:
+
+H0 - mean of performance of portfolio = Mean on QQQ performance
+Ha - means are not equal.
+
+```{r}
+t.test(short_pnl$net5,short_pnl$NASDAQ5)
+t.test(short_pnl$net10,short_pnl$NASDAQ10)
+t.test(long_pnl$net5,long_pnl$NASDAQ5)
+t.test(long_pnl$net5,long_pnl$NASDAQ5)
+```
+
+Looks like we can reject the null hypotheses and conclude that the means are not equal.
+
+
+
+Next We want to plot relative performance, but to do that we need to convert data in long_pnl and short_pnl from wide to long format
+
+```{r}
+library(tidyr)
+long <- long_pnl %>% gather(Type, Net, 2:5)
+short <- short_pnl %>% gather(Type, Net, 2:5)
+```
+
+
+Next we plot the long and short strategies and compare them with NASDAQ 1 week and 2 week performance.
+
+```{r}
+library(ggplot2)
+ggplot(data=long,
+       aes(x=date, y=Net, colour = Type, group = Type)) + geom_point() +
+  geom_line() +
+  labs(x = "Date", y = "Performance", 
+       title = "Relative performance of 1 week and 2 week long strategy vs NASDAQ 5 day and NASDAQ 10 day")
+
+
+ggplot(data=short,
+       aes(x=date, y=Net, colour = Type, group = Type)) + geom_point() +
+  geom_line() +
+  labs(x = "Date", y = "Performance", 
+       title = "Relative performance of 1 week and 2 week short strategy vs NASDAQ 5 day and NASDAQ 10 day")
+```
+
+
+Next we will aggrigate the data and create a synthetic portfolio of $1000 and see how it performs for the long startegy, short strategy and long/short strategy and benchmark it against overal perfromance of QQQ for the period of 01-15-2015 to 11-13-2015.  I will need to export data to excel to create a compunded table and import it back to R. For QQQ we will purchase 9.859016 shares of QQQ on 2015-01-15 for the price of 101.43 for the total of $1000.00 and then track the performance of 9.859016 shares.
+
+first lets model portfolio starting with $1000.00 invested into QQQ
+```{r}
+
+dates = c('2015-01-15', '2015-01-30', '2015-02-13', '2015-02-17', '2015-03-16', '2015-03-31', '2015-04-15', '2015-04-30', '2015-05-15', '2015-05-29', '2015-06-15', '2015-06-30', '2015-07-15', '2015-07-31', '2015-08-14', '2015-08-31', '2015-09-15', '2015-09-30', '2015-10-15', '2015-10-30', '2015-11-13')
+
+NASDAQ.df = data.frame()
+
+for (i in 1:21)
+{
+  NASDAQ.df[i,1] = as.numeric(QQQ[dates[i],1])*9.859016
+  NASDAQ.df[i,2] = long_pnl$date[i]
+}
+
+kable(NASDAQ.df)
+```
+
+next we import the csv with aggrigated data and finally plot the results
+
+```{r}
+port.df = read.csv("C:/Users/joseph/Downloads/Short Interest/NASDAQ 2015/portfolio.csv")
+ggplot(data = port.df, aes(X1, Long_net5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long 1week Strategy")
+ggplot(data = port.df, aes(X1, Long_net10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long 2week Strategy")
+ggplot(data = port.df, aes(X1, Short_net5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Short 1week Strategy")
+ggplot(data = port.df, aes(X1, Short_net10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Short 2week Strategy")
+ggplot(data = port.df, aes(X1, LSnet5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long/Short 1week Strategy")
+ggplot(data = port.df, aes(X1, LSnet10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long/Short 2 week Strategy")
+ggplot(data = NASDAQ.df, aes(V2, V1, group=1)) +geom_line() +geom_point() +labs(title = "$1000 invested into NASDAQ COMPOSITE")
+```
+
+## Conclusion
+
+This has been an interesting project.  I encountered a number of issues that I jave not anticipated, but yet I think I have interesting results that raised more quesions and will most likely push me to dig deeper into the data and search for better results. Before we get to the final conlclusions, I want to note that this simulation has not taken into consideration any commision charged bby the broker and the fees related to the interest that needs to be paid for holding any short positions.  Also I had to ignore a lot of data since the API I am using does not provide market data for delisted stocks. I have found that there were a number of companies that have been aquired and a number of companies that have been delisted or moved to pink sheets and there was no market data available for those stocks, shich is unfortunate, because it is safe to assume that there are usually sginificant moves ahead of aquisiotion or a bankrupsy which we unfortunately did not capture in this study due to limitations of market data API.
+
+### Relative performance
+The results are interesting and surprisingly not very consistent between 1 week and 2 week strategies. So for the Long strategies we have 32% gain for 1 week and 10% gain for 2 weeks and for the Short strategy we have -5% for 1 week and 29% gain for 2 week strategy. So we have a significant outperformance of 1 week strategy for the longs and significant outperformance of the 2 week strategy for the shorts. This does perfectly ballnce out for the Long/Short strategy which assumes 50% invested into shorts and 50% invested into longs and for the Long/Short strategy we have 13% for 1 week and 15% gains for the 2 weeks which both beat the performance of Nasdaq which was 10%.
+
+The Long/Short strategy did outperform the market and also showed less volatility and did not produce more then 5% decline over the period.  Also it might seem that the long strategies performed better, but it seems that the overal market also was bullish for the period and during the bearish moves in the market the 2 week long strategy showed significant lossed for the time and was down 30% before sharply rebounding, so clearly a market neutral strategy is a much safer choice unless one is bias towards the potential market direction.
+
+###Future work 
+I think there are lot of improvements that could be made in the strategy:
+1. Stop/loss triggers. Some of the significant losses where mostly due to several highly volatile stocks and when a strategy did not pick the correct direction, the lossing stock would produce heavy losses. a 5 or 10% stop loss order placed beforehand could potentially prevent heavy losses from single stocks.
+2. If we were to pick changes in float before Earnings, I belive we could potentially improve the stategy.
+3. Better source of market data would certainly be more beneficial.
+4. Different source of reports with more up to date data would certainly help.
+5. Some code improvement would make this project easier to continue working on. Once we have more standardised data and reliable, functions can be used to process each report instead of going through each report individually.
