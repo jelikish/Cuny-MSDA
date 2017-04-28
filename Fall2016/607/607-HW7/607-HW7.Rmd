@@ -14,6 +14,7 @@ library(knitr)
 
 ```{r}
 library(XML)
+
 url = "c:/data/books.html"
 htmlbooks = readHTMLTable(url,stringsAsFactors = FALSE)
 htmlbooks.df = as.data.frame(htmlbooks)
@@ -24,6 +25,7 @@ kable(htmlbooks.df)
 ## XML
 
 ```{r}
+#xml = "https://raw.githubusercontent.com/jelikish/Cuny1/master/Fall2016/607/607-HW7/books.xml"
 xml = "c:/data/books.xml"
 xmlbook = xmlParse(xml)
 root = xmlRoot(xmlbook)
@@ -37,6 +39,7 @@ kable(xmlbooks.df)
 ```{r}
 library(jsonlite)
 library(plyr)
+json = "https://raw.githubusercontent.com/jelikish/Cuny1/master/Fall2016/607/607-HW7/books.json"
 json = "c:/data/books.json" 
 jsonbooks = fromJSON(json)
 jsonbooks.unlist <- sapply(jsonbooks[[1]], unlist)

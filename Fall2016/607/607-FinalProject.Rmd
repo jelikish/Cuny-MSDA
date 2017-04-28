@@ -17,11 +17,11 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 ## Introduction
 
-For my final project I decided to test a potential trading strategy idea I had in regards to stock market. The strategy involves following the short interest list and initiating trades based on that list. The short interest list is released byweekly and shows how many shares are curenlt held short vs shares outsdandning for the particular stock. So the idea is to folow the list and detect the large changes in the shares outstanding to see if that is a good indicator of where the stock will move in the near term. For this study I decided to do the following: Find the 25 stocks with the largest positive change in percentage of shares shorted and 25 largest declines.  Calculate the perfornce of the stock in a suggested direction for 1 week and 2 weeks. Perform the above for all 21 reports and test it vs the Index.  I this study I decided to only use NASDAQ stocks, so we will be testing teh relative performance vs QQQ ETF which tracks NASDAQ Composite Index.
+For my final project I decided to test a potential trading strategy idea I had in regards to stock market. The strategy involves following the short interest list and initiating trades based on that list. The short interest list is released biweekly and shows how many shares are current held short vs shares outstanding for the particular stock. So the idea is to follow the list and detect the large changes in the shares outstanding to see if that is a good indicator of where the stock will move in the near term. For this study I decided to do the following: Find the 25 stocks with the largest positive change in percentage of shares shorted and 25 largest declines.  Calculate the performance of the stock in a suggested direction for 1 week and 2 weeks. Perform the above for all 21 reports and test it vs the Index.  I this study I decided to only use NASDAQ stocks, so we will be testing the relative performance vs QQQ ETF which tracks NASDAQ Composite Index.
 
-Finding the data turned out to be harder then I anticipated. I ended up signing up for a service which promissed to have the the short lists available: http://WallStreetCourier.com. It turned out they only have hiostorical data, so I was able to obtain data for 2015-01-15 to 2015-11-13 which includes 21 byweekly reports and  represents almost a full year. For the purposes of this study I decided that data is sufficient.  The reports were converted to csv format and locaded into R. 
+Finding the data turned out to be harder then I anticipated. I ended up signing up for a service which promised to have the the short lists available: http://WallStreetCourier.com. It turned out they only have historical data, so I was able to obtain data for 2015-01-15 to 2015-11-13 which includes 21 biweekly reports and  represents almost a full year. For the purposes of this study I decided that data is sufficient.  The reports were converted to csv format and loaded into R. 
 
-We will need market data to test the theory and I will be using quandmod library which pulls data from yahoo finance, google finance and other sources:  http://www.quantmod.com/
+We will need market data to test the theory and I will be using quandmod library which pulls data from yahoo finance, Google finance and other sources:  http://www.quantmod.com/
 
 ## Data Preperation
 
@@ -45,7 +45,7 @@ kable(head(`2015_01_15`))
 
 
 
-Next we will setup a callendar function which will return a next busienss day, Order the dataframes by the percentage of float changes and create new dataframes holding top and bottom 25 results for each of the reports and finally download the market data for QQQ stock.
+Next we will setup a calendar function which will return a next business day, Order the data frames by the percentage of float changes and create new data frames holding top and bottom 25 results for each of the reports and finally download the market data for QQQ stock.
 ```{r}
 library(tools)
 DFs = file_path_sans_ext(list.files(path=path, pattern = "*.csv"))
@@ -169,9 +169,9 @@ getSymbols('QQQ', from="2015-01-01")
 ```
 
 
-Next we will process 2 dataframes top and bottom for each of the 21 stocks.  Since there are some modifications that need to be done such as checking the tickers for validity and removing expired tickers, we will have to run this per report and generate a lot of code.  
+Next we will process 2 data frames top and bottom for each of the 21 stocks.  Since there are some modifications that need to be done such as checking the tickers for validity and removing expired tickers, we will have to run this per report and generate a lot of code.  
 
-Each block of code will do the following: Set buy date and sell dates ( 1week and 2 weeks), Check symbols for validity and if the symbols are valid, download market data for those symbols. Pull up the opwn prices of each stock for those dates and reord it to portfolio dataframe.  Next we will calculate PNL and record it to appropriate dataframes.
+Each block of code will do the following: Set buy date and sell dates ( 1week and 2 weeks), Check symbols for validity and if the symbols are valid, download market data for those symbols. Pull up the open prices of each stock for those dates and record it to portfolio data frame.  Next we will calculate PNL and record it to appropriate data frames.
 
 
 ```{r}
@@ -413,7 +413,7 @@ for (i in 1:length(top2015_03_15) )
 {
   if (any(grep(top2015_03_15$Ticker[i], tickersList$Symbol)))
   {
-    print(top2015_03_15$Ticker[i])
+    #print(top2015_03_15$Ticker[i])
     getSymbols(top2015_03_15$Ticker[i], from="2015-01-01") 
     portfolio[j,1] = top2015_03_15$Ticker[i]
     portfolio[j,2] = as.numeric(get(top2015_03_15$Ticker[i])[buydate,1])
@@ -635,7 +635,7 @@ for (i in 1:length(top2015_05_15) )
 {
   if (any(grep(top2015_05_15$Ticker[i], tickersList$Symbol)))
   {
-    print(top2015_05_15$Ticker[i])
+    #print(top2015_05_15$Ticker[i])
     getSymbols(top2015_05_15$Ticker[i], from="2015-01-01") 
     portfolio[j,1] = top2015_05_15$Ticker[i]
     portfolio[j,2] = as.numeric(get(top2015_05_15$Ticker[i])[buydate,1])
@@ -1022,7 +1022,7 @@ for (i in 1:length(top2015_08_31) )
 {
   if (any(grep(top2015_08_31$Ticker[i], tickersList$Symbol)))
   {
-    print(top2015_08_31$Ticker[i])
+    #print(top2015_08_31$Ticker[i])
     getSymbols(top2015_08_31$Ticker[i], from="2015-01-01") 
     portfolio[j,1] = top2015_08_31$Ticker[i]
     portfolio[j,2] = as.numeric(get(top2015_08_31$Ticker[i])[buydate,1])
@@ -1190,7 +1190,7 @@ for (i in 1:length(top2015_10_15) )
 {
   if (any(grep(top2015_10_15$Ticker[i], tickersList$Symbol)))
   {
-    print(top2015_10_15$Ticker[i])
+    #print(top2015_10_15$Ticker[i])
     getSymbols(top2015_10_15$Ticker[i], from="2015-01-01") 
     portfolio[j,1] = top2015_10_15$Ticker[i]
     portfolio[j,2] = as.numeric(get(top2015_10_15$Ticker[i])[buydate,1])
@@ -1345,7 +1345,7 @@ short_pnl <- rbind(short_pnl, data.frame("date"=buydate, "net5"=sum(portfolio$ne
 
 ## Data Analisys
 
-As a result of data preperation we have the following datasets: long_pnl, short_pnl, trades_long and trades_short. Long and short pnl contains overal performance of the strategy per report so each has 21 entries. trades long and short contain all individual trades and performance for long and short strategy respectively.
+As a result of data preparation we have the following datasets: long_pnl, short_pnl, trades_long and trades_short. Long and short pnl contains overall performance of the strategy per report so each has 21 entries. trades long and short contain all individual trades and performance for long and short strategy respectively.
 
 ```{r}
 kable(head(`long_pnl`))
@@ -1363,7 +1363,7 @@ hist(long_trades$net10)
 
 ### t-test
 
-For net10 the data distribution appears to be pretty close to normal. net5 has a data skewed, but since we have n>30 we can proceed with the test. It should be noted that the data is not inependent and was collected based on the specific selection, but we can go ahead with the test for this study.
+For net10 the data distribution appears to be pretty close to normal. net5 has a data skewed, but since we have n>30 we can proceed with the test. It should be noted that the data is not independent and was collected based on the specific selection, but we can go ahead with the test for this study.
 
 We will setup the following Hypotheses for 4 tests:
 
@@ -1409,7 +1409,7 @@ ggplot(data=short,
 ```
 
 
-Next we will aggrigate the data and create a synthetic portfolio of $1000 and see how it performs for the long startegy, short strategy and long/short strategy and benchmark it against overal perfromance of QQQ for the period of 01-15-2015 to 11-13-2015.  I will need to export data to excel to create a compunded table and import it back to R. For QQQ we will purchase 9.859016 shares of QQQ on 2015-01-15 for the price of 101.43 for the total of $1000.00 and then track the performance of 9.859016 shares.
+Next we will aggregate the data and create a synthetic portfolio of $1000 and see how it performs for the long strategy, short strategy and long/short strategy and benchmark it against overall performance of QQQ for the period of 01-15-2015 to 11-13-2015.  I will need to export data to excel to create a compounded table and import it back to R. For QQQ we will purchase 9.859016 shares of QQQ on 2015-01-15 for the price of 101.43 for the total of $1000.00 and then track the performance of 9.859016 shares.
 
 first lets model portfolio starting with $1000.00 invested into QQQ
 ```{r}
@@ -1427,32 +1427,32 @@ for (i in 1:21)
 kable(NASDAQ.df)
 ```
 
-next we import the csv with aggrigated data and finally plot the results
+next we import the csv with aggregated data and finally plot the results
 
 ```{r}
 port.df = read.csv("C:/Users/joseph/Downloads/Short Interest/NASDAQ 2015/portfolio.csv")
-ggplot(data = port.df, aes(X1, Long_net5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long 1week Strategy")
-ggplot(data = port.df, aes(X1, Long_net10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long 2week Strategy")
-ggplot(data = port.df, aes(X1, Short_net5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Short 1week Strategy")
-ggplot(data = port.df, aes(X1, Short_net10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Short 2week Strategy")
-ggplot(data = port.df, aes(X1, LSnet5)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long/Short 1week Strategy")
-ggplot(data = port.df, aes(X1, LSnet10)) +geom_line() +geom_point() +labs(title = "$1000 invested into Long/Short 2 week Strategy")
-ggplot(data = NASDAQ.df, aes(V2, V1, group=1)) +geom_line() +geom_point() +labs(title = "$1000 invested into NASDAQ COMPOSITE")
+ggplot(data = port.df, aes(X1, Long_net5)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Long 1week Strategy")
+ggplot(data = port.df, aes(X1, Long_net10)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Long 2week Strategy")
+ggplot(data = port.df, aes(X1, Short_net5)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Short 1week Strategy")
+ggplot(data = port.df, aes(X1, Short_net10)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Short 2week Strategy")
+ggplot(data = port.df, aes(X1, LSnet5)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Long/Short 1week Strategy")
+ggplot(data = port.df, aes(X1, LSnet10)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into Long/Short 2 week Strategy")
+ggplot(data = NASDAQ.df, aes(V2, V1, group=1)) +geom_line() +geom_point() +labs(x = "Jan 15 2015 - Nov 13 2015", y = "$ Performance", title = "$1000 invested into NASDAQ COMPOSITE")
 ```
 
 ## Conclusion
 
-This has been an interesting project.  I encountered a number of issues that I jave not anticipated, but yet I think I have interesting results that raised more quesions and will most likely push me to dig deeper into the data and search for better results. Before we get to the final conlclusions, I want to note that this simulation has not taken into consideration any commision charged bby the broker and the fees related to the interest that needs to be paid for holding any short positions.  Also I had to ignore a lot of data since the API I am using does not provide market data for delisted stocks. I have found that there were a number of companies that have been aquired and a number of companies that have been delisted or moved to pink sheets and there was no market data available for those stocks, shich is unfortunate, because it is safe to assume that there are usually sginificant moves ahead of aquisiotion or a bankrupsy which we unfortunately did not capture in this study due to limitations of market data API.
+This has been an interesting project.  I encountered a number of issues that I have not anticipated, but yet I think I have interesting results that raised more questions and will most likely push me to dig deeper into the data and search for better results. Before we get to the final conclusions, I want to note that this simulation has not taken into consideration any commission charged by the broker and the fees related to the interest that needs to be paid for holding any short positions.  Also I had to ignore a lot of data since the API I am using does not provide market data for delisted stocks. I have found that there were a number of companies that have been aquired and a number of companies that have been delisted or moved to pink sheets and there was no market data available for those stocks, which is unfortunate, because it is safe to assume that those exact companies are usually the ones generating significant move in a stock price ahead of acquisition or a bankruptcy which we unfortunately did not capture in this study due to limitations of market data API which was used.
 
 ### Relative performance
-The results are interesting and surprisingly not very consistent between 1 week and 2 week strategies. So for the Long strategies we have 32% gain for 1 week and 10% gain for 2 weeks and for the Short strategy we have -5% for 1 week and 29% gain for 2 week strategy. So we have a significant outperformance of 1 week strategy for the longs and significant outperformance of the 2 week strategy for the shorts. This does perfectly ballnce out for the Long/Short strategy which assumes 50% invested into shorts and 50% invested into longs and for the Long/Short strategy we have 13% for 1 week and 15% gains for the 2 weeks which both beat the performance of Nasdaq which was 10%.
+The results are interesting and surprisingly not very consistent between 1 week and 2 week strategies. So, for the Long strategies we have 32% gain for 1 week and 10% gain for 2 weeks and for the Short strategy we have -5% for 1 week and 29% gain for 2 week strategy. So we have a significant out performance of 1 week strategy for the longs and significant out performance of the 2 week strategy for the shorts. This does perfectly balance out for the Long/Short strategy which assumes 50% invested into shorts and 50% invested into longs and for the Long/Short strategy we have a gains of 13% for 1 week and 15% gains for the 2 weeks which both beat the performance of Nasdaq which was 10%.
 
-The Long/Short strategy did outperform the market and also showed less volatility and did not produce more then 5% decline over the period.  Also it might seem that the long strategies performed better, but it seems that the overal market also was bullish for the period and during the bearish moves in the market the 2 week long strategy showed significant lossed for the time and was down 30% before sharply rebounding, so clearly a market neutral strategy is a much safer choice unless one is bias towards the potential market direction.
+The Long/Short strategy did outperform the market and also showed less volatility and did not produce more then 5% decline over the period.  Also it might seem that the long strategies performed better, but it seems that the overall market was bullish for the period and during the bearish moves in the market the 2 week long strategy showed significant losses for the time and was down 30% before sharply rebounding, so clearly a market neutral strategy is a much safer choice unless one is bias towards the potential market move direction.
 
 ###Future work 
-I think there are lot of improvements that could be made in the strategy:
-1. Stop/loss triggers. Some of the significant losses where mostly due to several highly volatile stocks and when a strategy did not pick the correct direction, the lossing stock would produce heavy losses. a 5 or 10% stop loss order placed beforehand could potentially prevent heavy losses from single stocks.
-2. If we were to pick changes in float before Earnings, I belive we could potentially improve the stategy.
+I think there are lot of improvements that could be made to the strategy:
+1. Stop/loss triggers. Some of the significant losses where mostly due to several highly volatile stocks and when a strategy did not pick the correct direction, the losing stock would produce heavy losses. a 5 or 10% stop loss order placed beforehand could potentially prevent heavy losses from single highly volatile stocks.
+2. If we were to update the stratgey and look for changes in % of float for stocks that have upcoming Earnings, I believe we could potentially improve the strategy. This theory is worth testing.
 3. Better source of market data would certainly be more beneficial.
 4. Different source of reports with more up to date data would certainly help.
-5. Some code improvement would make this project easier to continue working on. Once we have more standardised data and reliable, functions can be used to process each report instead of going through each report individually.
+5. Some code improvement would make this project easier to continue working on. Once we have more standardized and reliable data, functions can be used to process each report instead of going through each report individually.
