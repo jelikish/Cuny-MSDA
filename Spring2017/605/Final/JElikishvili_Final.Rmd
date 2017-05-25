@@ -1,0 +1,266 @@
+---
+title: "IS605-FinalProject"
+author: "Joseph Elikishvili"
+date: "May 22, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: united
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## IS605 Final
+
+You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression
+Techniques competition. https://www.kaggle.com/c/house-prices-advanced-regression-techniques . I
+want you to do the following.
+
+
+Pick one of the quantitative independent variables from the training data set (train.csv) , and define that
+variable as X. Pick SalePrice as the dependent variable, and define it as Y for the next analysis. 
+
+##### We will choose GrossLivingArea as variable X and saleprice as variable y as given. 
+
+```{r}
+dataset = read.csv('c:/data/605/train.csv', header = TRUE)
+#summary(dataset)
+```
+
+### Probability. 
+
+Calculate as a minimum the below probabilities a through c. Assume the small letter "x" is estimated as the 4th quartile (this is correct) of the X variable, and the small letter "y" is estimated as the 2nd quartile of the Y variable. Interpret the meaning of all probabilities.
+
+a. P(X>x | Y>y) b. P(X>x, Y>y) c. P(X<x | Y>y)
+
+```{r}
+summary(dataset$GrLivArea)
+
+#Assigning value of 1777 based on above
+xQ3 = 1777
+
+summary(dataset$SalePrice)
+#Assigning value of 163000 based on above
+yQ2 = 163000
+
+```
+
+
+
+a. P(X>x | y>y) 
+
+```{r}
+
+#taking a subset where y > Q2
+y_subset = subset(dataset, SalePrice > yQ2)
+
+#count number of rows 
+y_rows = nrow(y_subset)
+
+#find probablity of x>Q3 given y>Q2
+Pa = nrow(subset(y_subset, GrLivArea > xQ3))/y_rows
+Pa
+```
+
+b. P(X>x, Y>y)
+
+```{r}
+#Subset given (x>Q3 and y>Q2)
+subsetB = subset(dataset, SalePrice> yQ2 & GrLivArea > xQ3)
+Pb = nrow(subsetB)/nrow(dataset)
+Pb
+```
+
+c. P(X<x | Y>y)
+
+```{r}
+#taking a subset where y > Q2
+y_subset = subset(dataset, SalePrice > yQ2)
+
+#count number of rows 
+y_rows = nrow(y_subset)
+
+#find probablity of x<Q3 given y>Q2
+Pc = nrow(subset(y_subset, GrLivArea < xQ3))/y_rows
+Pc
+
+# We could have also gotten this by 1- Pa
+1-Pa
+```
+
+
+Does splitting the training data in this fashion make them independent? In other words, does P(XY)=P(X)P(Y) or does P(X|Y) = P(X)? Check mathematically, and then evaluate by running a Chi Square test for association. You might have to research this. A Chi Square test for independence (association) will require you to bin the data into logical groups
+
+
+
+P(X|Y) = (X>x | Y>y) =  0.4326923   We have calculated this in the example a) above
+
+P(X) = P(X>x) = P(X>xQ3) = 0.25  ( calculated below)
+
+Therefore P(X|Y) != P(X) 
+
+
+
+```{r}
+x_subset = subset(dataset, GrLivArea > xQ3)
+Px = nrow(subset(dataset, GrLivArea > xQ3))/nrow(dataset)
+Px
+```
+
+Build Contingency Table and perform a Chi Square test
+
+```{r}
+
+Con_table <- table(dataset$GrLivArea > xQ3, dataset$SalePrice> yQ2)
+Con_table
+
+chisq.test(Con_table)
+```
+
+The Chi Square test tests the following hypothesis:
+
+Ho: Data is independent
+Ha: Data is not independent
+
+The test produces a p-value that is very low so we can safely reject the Null hypotheses and conclude that there is not enough proof to conclude that data is independent 
+
+The Chi Square test conforms with our previous conclusion that Gross Living Ares is not independent from Sales Price.
+
+
+### Descriptive and Inferential Statistics. 
+
+Provide univariate descriptive statistics and appropriate plots for both variables. Provide a scatterplot of X and Y. Transform both variables simultaneously using Box-Cox transformations. You might have to research this. Using the transformed variables, run a correlation analysis and interpret. Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval. Discuss the meaning of your analysis.
+
+```{r}
+
+library(psych)
+summary(dataset$GrLivArea)
+describe(dataset$SalePrice)
+describe(dataset$GrLivArea)
+
+d = density(dataset$GrLivArea)
+plot(d, main="Gross Living Area Density Plot")
+polygon(d, col="red", border="blue")
+
+
+hist(dataset$GrLivArea)
+
+plot(dataset$GrLivArea, dataset$SalePrice)
+```
+
+Box-cox
+
+```{r}
+library(MASS)
+#Create LM
+linm = lm(GrLivArea~SalePrice, data = dataset)
+bc = boxcox(linm, lambda=seq(0,1,by=.1))
+
+#find the max possible y to point to best lambda estimate
+lambda=bc$x[which.max(bc$y)]
+lambda
+
+describe(dataset$GrLivArea^lambda)
+
+#Apply transformation to variables
+t_dataset = data.frame(dataset$GrLivArea^lambda, dataset$SalePrice^lambda)
+colnames(t_dataset) <- c("GrLivArea","SalePrice")
+
+head(t_dataset)
+plot(t_dataset)
+
+#correlation
+
+cor(t_dataset)
+
+cor.test(t_dataset$GrLivArea, t_dataset$SalePrice, conf.level = 0.99)
+
+```
+
+Based on above we see that p-value is pretty small so we can reject the Null Hypoteses and state that we do no have enough evidence to suggest that correlation is equal to 0.  So based on that it is safe to state that correlation is not 0.
+
+
+
+###Linear Algebra and Correlation. 
+
+Invert your correlation matrix from the previous section. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix.
+
+```{r}
+#library('corrplot')
+#corrplot(t_dataset, method = "circle")
+
+cor_M = cor(t_dataset)
+cor_M
+pres_M = solve(cor_M)
+pres_M
+
+cor_M %*% pres_M
+
+pres_M %*% cor_M
+```
+
+###Calculus-Based Probability & Statistics. 
+
+Many times, it makes sense to fit a closed form distribution to data. For your non-transformed independent variable ( X ), location shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit a density function of your choice. (See https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ). Find the optimal value of the parameters for this distribution, and then take 1000 samples from this distribution (e.g., rexp(1000, ???) for an exponential). Plot a histogram and compare it with a histogram of your non-transformed original variable. 
+
+
+The Data we are using is always above 0 so we will not be using location shift.
+
+```{r}
+
+library(MASS)
+
+fit_exp = fitdistr(dataset$GrLivArea, "exponential")
+
+fit_exp
+
+
+
+lambda_exp = fit_exp$estimate
+
+exp_df = rexp(1000, lambda_exp)
+
+#Histogram of Samples
+hist(exp_df)
+describe(exp_df)
+
+
+#Histogram of Original Data
+hist(dataset$GrLivArea)
+describe(dataset$GrLivArea)
+```
+
+Both histograms are skewed to the right, but the original histogram is closer to normal, this is evident by simply looking at the histograms and by comparing the skew levels ( 1.36 vs 2.54)
+
+
+### Modeling. 
+
+Build some type of regression model and submit your model to the competition board. You can use as many variables as you like. Provide your complete model summary and results with analysis. 
+
+
+ 
+```{r}
+
+attach(dataset)
+
+model = lm(SalePrice~GrLivArea+LotArea+X1stFlrSF)
+summary(model)
+
+#load test dataset
+test_dataset = read.csv('c:/data/605/test.csv', header = TRUE)
+
+PredictedSales = predict(model, test_dataset)
+head(PredictedSales)
+
+write.csv(PredictedSales, file = "kaggle.csv")
+
+```
+
+First I selected variables that I thought made sence to build a multiple regression model. I added and removed several in order to improve adjusted R-squared. Next I had an issue with a number of variables which kept producing single bad estimate like negative value for Sale price or 'NA', so I had to trim the list of my variables down since kaggle expects a specific format so I could not just ommit "bad" entries, so I removed a big nnumber of variables, which  decreased my adjusted r-squared.  
+
+My kaggle username is Joseph Elikishvili I am currently #2010 with the score of 0.26499.  
