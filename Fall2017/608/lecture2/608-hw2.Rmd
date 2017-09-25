@@ -1,0 +1,95 @@
+---
+title: "608-hw2"
+author: "Joseph Elikishvili"
+date: "September 24, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, comment=FALSE)
+
+
+library(bigvis)
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+```
+
+I combined the boros into 1 data set using the code below and verified that it is complete. Since file is too big I am using a local file, I am ssuming that is how we are expected to complete this assignment. 
+
+```{r}
+#Create a local data file combining all boros
+#BK = read.csv("C:/data/608/BORO_zip_files_csv/BK.csv", header = TRUE)
+#BX = read.csv("C:/data/608/BORO_zip_files_csv/BX.csv", header = TRUE)
+#MN = read.csv("C:/data/608/BORO_zip_files_csv/MN.csv", header = TRUE)
+#QN = read.csv("C:/data/608/BORO_zip_files_csv/QN.csv", header = TRUE)
+#SI = read.csv("C:/data/608/BORO_zip_files_csv/SI.csv", header = TRUE)
+
+#merge
+#data = rbind(BK,BX,MN,QN,SI)
+
+#Lets see if this worked.
+#nrow(BK)+nrow(BX)+nrow(MN)+nrow(QN)+nrow(SI) == nrow(data)
+
+#save into a file.
+#write.csv(data, file = "boro_complete.csv")
+```
+
+
+
+#### Q1. After a few building collapses, the City of New York is going to begin investigating older buildings for safety. However, the city has a limited number of inspectors, and wants to find a 'cut-off' date before most city buildings were constructed. Build a graph to help the city determine when most buildings were constructed. Is there anything in the results that causes you to question the accuracy of the data? (note: only look at buildings built since 1850)
+
+```{r}
+
+data = read.csv("C:/data/608/BORO_zip_files_csv/boro_complete.csv", header = TRUE)
+
+
+data1 <- data %>% filter(YearBuilt > 1850, NumFloors != 0) %>% select(YearBuilt)
+
+yr <- with(data1, condense(bin(YearBuilt, 1)))
+ggplot(yr) + geom_line(aes(x=YearBuilt, y=.count)) + geom_point(aes(x=YearBuilt, y=.count)) + theme_tufte() + ylab("") + xlab("Average Number of buildings built per year")
+
+yr5 <- with(data1, condense(bin(YearBuilt, 5)))
+ggplot(yr5) + geom_line(aes(x=YearBuilt, y=.count)) + geom_point(aes(x=YearBuilt, y=.count)) + theme_tufte() + ylab("") + xlab("Average Number of buildings built per every 5 years")
+
+yr10 <- with(data1, condense(bin(YearBuilt, 10)))
+ggplot(yr10) + geom_line(aes(x=YearBuilt, y=.count)) + geom_point(aes(x=YearBuilt, y=.count)) + ylab("") + xlab("Average Number of buildings built per every 10 years") + theme_tufte()
+
+```
+
+It appears that if we look at 5 and 10 year averages we see that there has been a real boom around 1900-1920s and most of the buildings where constructed, but if we look at annual average, we see huge spikes every 5 years, so not sure how much we can trust the data, on one hand if the data is correct, 5 and 10 year averages are showing us what we need to see, but thats if we assume that an agregate reports were made every 5 years, so bottomline is we can use the 5 and 10 year averages assuming we understand why most of the records where done every 5 years between 1900 and 1960
+
+
+
+
+#### 2. The city is particularly worried about buildings that were unusually tall when they were built, since best-practices for safety hadn't yet been determined. Create a graph that shows how many buildings of a certain number of floors were built in each year (note: you may want to use a log scale for the number of buildings). It should be clear when 20-story buildings, 30-story buildings, and 40-story buildings were first built in large numbers.
+
+```{r}
+data2 <- data %>% filter(YearBuilt > 1850, NumFloors != 0) %>% select(YearBuilt, NumFloors)
+
+
+q2 = with(data2, condense(bin(YearBuilt, 1), bin(NumFloors, 1) ) )
+
+ggplot(q2, aes(YearBuilt, NumFloors, fill=.count )) + 
+  geom_raster() + theme_tufte() + scale_color_gradient(trans = "log") + ylab("") + xlab("Buildings built with specific number of floors per year ")
+
+```
+
+From Above chart we can see the 20+ story buildings starting appearing in large numbers around 1920-1930. Theer are some dating back to 1900 and should probably be examined first and then we see continuation of that and even higher buildings in 1920s and finally in 1930s we can see even higher buildings, so, my guess is 1900-1930 is probably a high risk zone for taller buildings.
+
+
+#### 3. Your boss suspects that buildings constructed during the US's involvement in World War II (1941-1945) are more poorly constructed than those before and after the way due to the high cost of materials during those years. She thinks that, if you calculate assessed value per floor, you will see lower values for buildings at that time vs before or after. Construct a chart/graph to see if she's right.
+
+```{r}
+data3 <- data %>% filter(YearBuilt > 1850, NumFloors != 0) %>% select(YearBuilt, AssessTot, NumFloors, AssessLand)
+
+data3$PerFloor = (data3$AssessTot-data3$AssessLand)/data3$NumFloors
+
+q3 = with(data3, condense(bin(YearBuilt, 5), z=PerFloor ) )
+
+ggplot(q3) + geom_line(aes(x=YearBuilt, y=.mean/1000)) + 
+  geom_point(aes(x=YearBuilt, y=.mean/1000)) +xlim(1900,2017) + theme_tufte() + ylab("Mean $ in 1000s") + xlab("Assessment per floor on average per 5 years")
+
+```
+
+If we take a look at the data averaged across 5 year intervals, we see what appears to agree with the theory, there was a drop in assessed value per floor.  I would argue that it is also possible that economy was not doing great and that pushed the valuations lower and also point to the fact that there have been other drops.  I also took a look at the data averaged annually and it shows the drop in valuations every 5 years similar to quesion #1. That could simply due to the fact that you have large chunks of data every 5 years and it seems to have lower mean then the years where only few records are present, so I guess again we should be looking at 5 year average.  So similar to quesion 1, if we assume that the data is correct we can say that the theory is accurate and we see that in the chart above.

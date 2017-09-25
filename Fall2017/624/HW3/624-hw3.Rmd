@@ -1,0 +1,80 @@
+---
+title: "624HW3"
+author: "Joseph Elikishvili"
+date: "September 16, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fpp)
+```
+
+# 624 HW3 HA6  Ex 6.2
+
+### a.	 Plot the time series of sales of product A. Can you identify seasonal fluctuations and/or a trend?
+
+```{r}
+plot(plastics)
+```
+
+There appears to be an upward trend and seasonal fluctuations are clearly visible on the chart.
+
+
+### b.	Use a classical multiplicative decomposition to calculate the trend-cycle and seasonal indices.
+
+```{r}
+fit <- decompose(plastics, type="multiplicative")
+plot(fit)
+
+```
+
+### c.	Do the results support the graphical interpretation from part (a)?
+Yes they do.  There is an uptrend present and seasonality is also present just like we observed in part A.
+
+
+### d. Compute and plot the seasonally adjusted data.
+```{r}
+season = seasadj(fit)
+plot(season)
+```
+
+
+### E. Change one observation to be an outlier (e.g., add 500 to one observation), and recompute the seasonally adjusted data. What is the effect of the outlier?
+
+```{r}
+p1 = plastics
+p1[50] = p1[50] + 500
+fit_p1 = decompose(p1, type="multiplicative")
+p1_s = seasadj(fit_p1)
+plot(p1_s)
+```
+
+### F. Does it make any difference if the outlier is near the end rather than in the middle of the time series?
+
+```{r}
+p2 = plastics
+p2[30] = p2[30] + 500
+fit_p2 = decompose(p2, type="multiplicative")
+p2_s = seasadj(fit_p2)
+plot(p2_s)
+```
+
+The outlier in the end seems to be affecting the data more then then outlier in the middle.
+
+### G. Use a random walk with drift to produce forecasts of the seasonally adjusted data.
+
+```{r}
+fit <- stl(plastics, t.window=15, s.window="periodic", robust=TRUE)
+eeadj <- seasadj(fit)
+plot(naive(eeadj),
+     main="Naive forecasts of seasonally adjusted data")
+```
+
+
+### H. Reseasonalize the results to give forecasts on the original scale.
+
+```{r}
+fcast <- forecast(fit, method="naive")
+plot(fcast, ylab="New orders index")
+```

@@ -1,0 +1,198 @@
+---
+title: "624-Hw4"
+author: "Joseph Elikishvili"
+date: "September 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fpp)
+```
+
+##Ex. HA7.1
+### Data set books contains the daily sales of paperback and hardcover books at the same store. The task is to forecast the next four days' sales for paperback and hardcover books (data set books).
+
+#### A. Plot the series and discuss the main features of the data.
+
+```{r}
+plot(books)
+```
+
+We can see that there is an uptrend present in both paperback and hardcover versions. Also there is a fluctuation in salse that resembles seasonality present more in paperback but is also present in hardcover, it is likely that that are days of week like wednesday or monday where there is less traffic and potentially weekend days that attract more customers. 
+
+
+#### B. Use simple exponential smoothing with the ses function (setting initial="simple") and explore different values of ???? for the paperback series. Record the within-sample SSE for the one-step forecasts. Plot SSE against ???? and find which value of ???? works best. What is the effect of ???? on the forecasts?
+```{r}
+paperback = books[,1]
+
+fit1 = ses(paperback, alpha=0.2, initial="simple", h=3)
+fit2 = ses(paperback, alpha=0.5, initial="simple", h=3)
+fit3 = ses(paperback, alpha=0.7, initial="simple", h=3)
+#fit4 = ses(paperback, initial="simple", h=3)
+fit5 = ses(paperback, alpha=0.1, initial="simple", h=3)
+fit6 = ses(paperback, alpha=0.9, initial="simple", h=3)
+sum((paperback-fitted(fit1) )^2)
+sum((paperback-fitted(fit2) )^2)
+sum((paperback-fitted(fit3) )^2)
+#sum((paperback-fitted(fit4) )^2)
+sum((paperback-fitted(fit5) )^2)
+sum((paperback-fitted(fit6) )^2)
+
+
+a = c(0.2, 0.5, 0.7, 0.1, 0.9)
+s = c(36329.34, 41383.7, 48773.56, 37785.2, 58769.45)
+f = c(209.38, 223.31, 231.74, 200.70, 241.39)
+
+plot(a,s, ylab="SSE", xlab="Alpha", main = "SSE with various alphas")
+
+plot(a,f, ylab="Forcast", xlab="Alpha", main = "SES forcast changes as alpha is changed")
+```
+
+From the values I have picked alpha = 0.2 seems to have the lease SSE. SSE is dropping as it approaches 0.2 and then moves higher.
+
+From second plot we can see that as we increase alpha, forcast also increases.
+
+#### C. Now let ses select the optimal value of ????. Use this value to generate forecasts for the next four days. Compare your results with 2.
+
+```{r}
+fit4 = ses(paperback, initial="simple", h=3)
+
+sum((paperback-fitted(fit4) )^2)
+```
+
+alpha = 0.2125, which is pretty close to 0.2 but would have been pretty tough to find without optimization.  Lower SSE also  confirms that we have the best value.
+
+#### D. Repeat but with initial="optimal". How much difference does an optimal initial level make?
+
+```{r}
+fit_o = ses(paperback, initial="optimal", h=3)
+
+# OPtimized
+summary(fit_o)
+
+#Simple
+summary(fit4)
+```
+
+Looks like we have changed the forcst from 210.1537 to 207.1098
+
+####
+
+```{r}
+hardcover = books[,2]
+
+fith1 = ses(hardcover, alpha=0.2, initial="simple", h=3)
+fith2 = ses(hardcover, alpha=0.5, initial="simple", h=3)
+fith3 = ses(hardcover, alpha=0.7, initial="simple", h=3)
+fith5 = ses(hardcover, alpha=0.1, initial="simple", h=3)
+fith6 = ses(hardcover, alpha=0.9, initial="simple", h=3)
+sum((hardcover-fitted(fith1) )^2)
+sum((hardcover-fitted(fith2) )^2)
+sum((hardcover-fitted(fith3) )^2)
+sum((hardcover-fitted(fith5) )^2)
+sum((hardcover-fitted(fith6) )^2)
+
+a = c(0.2, 0.5, 0.7, 0.1, 0.9)
+s = c(33148.16, 31702.6, 34993.95, 45714.82, 41209.53)
+f = c(232.01, 245.73, 250.80, 217.06, 255.64)
+
+plot(a,s, ylab="SSE", xlab="Alpha", main = "SSE with various alphas")
+
+plot(a,f, ylab="Forcast", xlab="Alpha", main = "SES forcast changes as alpha is changed")
+
+fith4 = ses(hardcover, initial="simple", h=3)
+
+sum((hardcover-fitted(fith4) )^2)
+fith4$model 
+#(alpha = 0.3473)
+
+
+fith_o = ses(hardcover, initial="optimal", h=3)
+summary(fith_o)
+summary(fith4)
+```
+
+b1. It appears that 0.5 is the best alpha from the values I have picked. From the second plot we see the same, alpha increase translates in increase in forcast.
+
+c1. Optimization shows alpha = 0.3473 to be the best parameter. Again, we have a lower SSE to confirm the results.
+
+d1. We see a small change in forcast from 239.56 to 40.38
+
+
+##Ex. HA7.3
+
+### For this exercise, use the quarterly UK passenger vehicle production data from 1977:1--2005:1 (data set ukcars).
+
+#### A. Plot the data and describe the main features of the series.
+
+```{r}
+plot(ukcars)
+```
+
+The plot shows an uptrend and clearly present seasonality
+
+#### B. Decompose the series using STL and obtain the seasonally adjusted data.
+
+```{r}
+#decompose
+fit <- stl(ukcars, t.window=15, s.window="periodic", robust=TRUE)
+plot(fit)
+
+#seasonally adjust
+season = seasadj(fit)
+plot(naive(season))
+```
+
+#### C. Forecast the next two years of the series using an additive damped trend method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of the one-step forecasts from your method.
+
+```{r}
+#Add damped
+damped <- holt(season, h=8, damped=TRUE)
+#plot(damped)
+
+#reseasonalize
+#fcast <- forecast(fit, method="naive")
+#plot(fcast)
+
+reseason = fit$time.series[110:113,"seasonal"]
+reasesoned_forcast = damped$mean + reseason
+
+plot(ukcars)
+lines(reasesoned_forcast, col="blue")
+summary(damped)
+#RMSE = 25.19512
+```
+
+#### D. Forecast the next two years of the series using Holt's linear method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of of the one-step forecasts from your method.
+
+```{r}
+holt_linear = holt(season, h=8)
+holt_reseason = holt_linear$mean + reseason
+
+summary(holt_linear)
+
+#RMSE = 25.39426
+```
+
+#### E. Now use ets() to choose a seasonal model for the data.
+
+```{r}
+fit_ets = ets(season)
+summary(fit_ets)
+#RMSE = 25.29404
+```
+
+#### F. Compare the RMSE of the fitted model with the RMSE of the model you obtained using an STL decomposition with Holt's method. Which gives the better in-sample fits?
+
+It appears that RMSEs are pretty close and do not show a significant difference.
+
+#### G. Compare the forecasts from the two approaches? Which seems most reasonable?
+
+```{r}
+plot(forecast(fit_ets, h=8)$mean)
+lines(damped$mean, col="blue")
+lines(holt_linear$mean, col="red")
+```
+
+There is very little difference in predictions to tell which one is better.
