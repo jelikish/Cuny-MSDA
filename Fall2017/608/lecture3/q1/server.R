@@ -6,7 +6,7 @@ library(ggthemes)
 library(plotly)
 
 #df = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/lecture3/cleaned-cdc-mortality-1999-2010-2.csv", header = TRUE)
-df = read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA608/master/lecture3/data/cleaned-cdc-mortality-1999-2010-2.csv", header = TRUE)
+df = read.csv("https://raw.githubusercontent.com/jelikish/Cuny1/master/Fall2017/608/lecture3/cleaned-cdc-mortality-1999-2010-2.csv", header = TRUE)
 df = dplyr::filter(df, Year == 2010)
 
 
