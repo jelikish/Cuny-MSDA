@@ -1,0 +1,73 @@
+<html>
+<head><title>Data608 HW5 Javascript</title></head>
+
+<body>
+
+<h1>Data608 HW5 Javascript</h1>
+<h2>1. Enter a word to see it in a reverse order </h2>
+
+
+<p>
+
+<script type="text/javascript">
+
+//function takes input from the below formm reverses the string and outputs result back
+function reverse(){
+	var w = document.getElementById("target");
+	w.innerHTML = document.getElementById('word').value.split("").reverse().join(""); 
+}
+
+</script>
+
+<p>
+<form>
+    <input id="word" type="string" size="10">
+    <input type="button" value="Reverse" onClick="reverse();">
+</form>
+</p>
+
+<div id="target"></div>
+
+
+
+<h2>2. Enter a Number to see first 20 multiples of the number</h2>
+
+
+
+
+<script type="text/javascript">
+
+//function gets input of a number from a form below, creates 4x5 table, multiplies the input by 1:20 and populates the table.  First loop itirates  through rows, inner loop trhough columns.
+function multiples(){
+	var m = document.getElementById("num").value;
+	var ctr = 1;
+	var rows = 5;
+    var cols = 4;
+    document.write("<table>");  
+    document.write("<table border='1px'>");
+    for(var i=0; i<rows;i++) {
+    	document.write("<tr>");
+    	for(var j=0; j<cols;j++) {
+    		document.write("<td>"+m*ctr+"</td>");
+    		ctr++;
+    	}
+    	document.write("</tr>");
+    }
+    document.write("</table>");
+}
+
+</script>
+
+
+
+<p>
+<form>
+    <input id="num" type="number" size="10">
+    <input type="button" value="Multiples" onClick="multiples();">
+</form>
+</p>
+
+
+
+</body>
+</html>
