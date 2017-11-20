@@ -1,0 +1,139 @@
+---
+title: "KJ3"
+author: "Joseph Elikishvili"
+date: "October 29, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+##KJ3.1
+
+#### A. Using visualizations, explore the predictor variables to understand their
+
+```{r}
+#load the data
+data(segmentationOriginal)
+library(mlbench)
+data(Glass)
+
+head(Glass)
+
+par(mfrow=c(3,3))
+hist(Glass$RI)
+hist(Glass$Na)
+hist(Glass$Mg)
+hist(Glass$Al)
+hist(Glass$Si)
+hist(Glass$K)
+hist(Glass$Ca)
+hist(Glass$Ba)
+hist(Glass$Fe)
+```
+
+lets look at the distribution of each predictor, we can see that some of the predictors are close to be normally distributed.  RI, Si, Na, AI, they show somew skew, but are close to normal. Ba, Fe, K show very strong skew in data. Mg is not unimodal. 
+
+```{r}
+pairs(Glass)
+```
+
+Next we will take a look at predictors and see if there is any kind of corelation between them.  We can see that most of the predictors are not corelated to each other the only pair that shows strong corelation is RI/Ca
+
+
+
+#### B.  Do there appear to be any outliers in the data? Are any predictors skewed?
+
+Lets take a look at boxplots
+
+```{r}
+par(mfrow=c(3,3))
+boxplot(Glass$RI)
+boxplot(Glass$Na)
+boxplot(Glass$Mg)
+boxplot(Glass$Al)
+boxplot(Glass$Si)
+boxplot(Glass$K)
+boxplot(Glass$Ca)
+boxplot(Glass$Ba)
+boxplot(Glass$Fe)
+```
+
+We can also count the number of outliers
+
+```{r}
+par(mfrow=c(3,3))
+length(boxplot.stats(Glass$RI)$out)
+length(boxplot.stats(Glass$Na)$out)
+length(boxplot.stats(Glass$Mg)$out)
+length(boxplot.stats(Glass$Al)$out)
+length(boxplot.stats(Glass$Si)$out)
+length(boxplot.stats(Glass$K)$out)
+length(boxplot.stats(Glass$Ca)$out)
+length(boxplot.stats(Glass$Ba)$out)
+length(boxplot.stats(Glass$Fe)$out)
+```
+
+It appears that Mg has no outliers and Ba has 38 outliers. Also we can see froom boxpplots that Ba outliers are all above the mean. Also K has one outlier that is really away from the rest of the data points
+
+
+#### C. Are there any relevant transformations of one or more predictors that might improve the classification model?
+
+Since classification model will be used with this data, it is normally resistant to outliers, so they do not pose a big threat to the process.
+
+We can try boxcox transformation and see how it affects the data, it is the most broad transfromation and includes log, power and invrse operations.  
+
+```{r}
+library(caret)
+trans <- preProcess(Glass, method = c("BoxCox", "center", "scale", "pca"))
+trans
+transformed <- predict(trans, Glass)
+par(mfrow=c(3,3))
+hist(transformed$PC1)
+hist(transformed$PC2)
+hist(transformed$PC3)
+hist(transformed$PC4)
+hist(transformed$PC5)
+hist(transformed$PC6)
+hist(transformed$PC7)
+
+```
+
+We can see that transformation improved data distribution a lot, it also removed 2 predictors, we saw that 1 was heavily corelated so was not needed and it acutally needed 7 predictors to to capture 95% of variance, so overal there is definately an improvement after the transformation.
+
+##KJ3.2
+
+#### A. Investigate the frequency distributions for the categorical predictors. Are any of the distributions degenerate in the ways discussed earlier in this chapter?
+
+Lets use nearZeroVar function to filter for near-zero variance predictors
+
+```{r}
+library(mlbench)
+data(Soybean)
+nearZeroVar(Soybean)
+```
+
+It appears there are 3 columns that need to be removed. Lets remove them
+
+```{r}
+Soy=Soybean[,-c(19,26,28)]
+```
+
+
+#### B. Roughly 18% of the data are missing. Are there particular predictors that are more likely to be missing? Is the pattern of missing data related to the classes?
+
+We can run summary on the dataset ans see how many NaNs we have per column. Lets do that
+
+```{r}
+summary(Soy)
+```
+
+We can see from above that some have more data missing then the others, for example sever, seed.tmt, germ, leaf.shred and other have over 100 na values, while some have only a few missing and some have 30-80 missing.  So this really from predictor to predictor.
+
+#### C. Develop a strategy for handling missing data, either by eliminating predictors or imputation.
+
+I normally like to impute the missing values by taking the average rather then eliminating, but this is categorical data and besides we have a lot of data missing, and in general we have a lot of predictors, so elimination seems reasonable in this case.
+
+Another option is to encode the missing variables with a special character which means there is no data, but I am not sure this is the case where missing data means anything significant.
+So my strategy would be to drop the missing values and try to work with whats left.
