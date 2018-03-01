@@ -7,28 +7,39 @@ library(plotly)
 library(reshape)
 
 #Load data for FANG stocks
-df = read.csv("C:/d3/hw6/marketcap_new1.csv", header = TRUE)
+#df = read.csv("C:/d3/hw6/marketcap_new1.csv", header = TRUE)
+df = read.csv("marketcap_new1.csv", header = TRUE)
 
 #Load Spider data
-SPY = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/SPY_annual.csv", header = TRUE)
+#SPY = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/SPY_annual.csv", header = TRUE)
+SPY = read.csv("SPY_annual.csv", header = TRUE)
 SPY$Stock = "SPY"
-XLU = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLY_annual.csv", header = TRUE)
+#XLU = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLY_annual.csv", header = TRUE)
+XLU = read.csv("XLU_annual.csv", header = TRUE)
 XLU$Stock = "XLU"
-XLB = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLB_annual.csv", header = TRUE)
+#XLB = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLB_annual.csv", header = TRUE)
+XLB = read.csv("XLB_annual.csv", header = TRUE)
 XLB$Stock = "XLB"
-XLE = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLE_annual.csv", header = TRUE)
+#XLE = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLE_annual.csv", header = TRUE)
+XLE = read.csv("XLE_annual.csv", header = TRUE)
 XLE$Stock = "XLE"
-XLF = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLF_annual.csv", header = TRUE)
+#XLF = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLF_annual.csv", header = TRUE)
+XLF = read.csv("XLF_annual.csv", header = TRUE)
 XLF$Stock = "XLF"
-XLI = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLI_annual.csv", header = TRUE)
+#XLI = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLI_annual.csv", header = TRUE)
+XLI = read.csv("XLI_annual.csv", header = TRUE)
 XLI$Stock = "XLI"
-XLK = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLK_annual.csv", header = TRUE)
+#XLK = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLK_annual.csv", header = TRUE)
+XLK = read.csv("XLK_annual.csv", header = TRUE)
 XLK$Stock = "XLK"
-XLP = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLP_annual.csv", header = TRUE)
+#XLP = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLP_annual.csv", header = TRUE)
+XLP = read.csv("XLP_annual.csv", header = TRUE)
 XLP$Stock = "XLP"
-XLV = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLV_annual.csv", header = TRUE)
+#XLV = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLV_annual.csv", header = TRUE)
+XLV = read.csv("XLV_annual.csv", header = TRUE)
 XLV$Stock = "XLV"
-XLY = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLY_annual.csv", header = TRUE)
+#XLY = read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Fall2017/608/project/XLY_annual.csv", header = TRUE)
+XLY = read.csv("XLY_annual.csv", header = TRUE)
 XLY$Stock = "XLY"
 
 #remove emty rows

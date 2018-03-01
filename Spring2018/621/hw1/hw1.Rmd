@@ -1,0 +1,207 @@
+---
+title: "Data621-hw1"
+author: "Joseph Elikishvili"
+date: "February 26, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+
+library(psych)
+library(knitr)
+```
+
+## 1. Introduction
+
+In this paper we will explore the set containing 2200 records. Each record represents a professional baseball team from the years 1871 to 2006 inclusive. Each record has the performance of the team for the given year, with all of the statistics adjusted to match the performance of a 162 game season. We will build several linear regression models on the training data to predict number of wins for the team.
+
+## 2. Data Exploration
+
+First we will load the data and review the dimensions of the dataset
+
+```{r}
+data <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw1/moneyball-training-data.csv", header = TRUE)
+
+dim(data)
+```
+So we have a total of 2276 records and 17 variables.
+
+Lets Review the data
+```{r}
+colnames(data)
+```
+It appears we have Index which is just the index of the data and can be removed and we have our target variable Target_Wins and a total of 15 predictor variables we will be working with.
+
+Next we will scan for missing values as those can affect the process
+```{r}
+colSums(is.na(data))
+```
+
+We can see that we have a reasonable number of missing values of the most of the predictors with the exception of TEAM_BATTING_HBP ( 2085 ) and TEAM_BASERUN_CS ( 772).  These are significant numbers of missing data points considering we have a total 2276 records.  One option is to remove the 2 columns, but we will attempt to impute the missing data and see if it can still be useful to us before removing the columns.
+
+
+Next we will review the predictors given to us to better understand the data we are dealing with.  The table gives us a basic overview of the data 
+```{r}
+data = data[,-1]
+table.desc <- describe(data)
+table.prep <- as.matrix(table.desc)
+table.round <- round((table.prep), 2)
+kable(table.round)
+```
+
+Next we will create a boxplot of each of the predictors to visualize the variability of the data
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data)){
+  boxplot(data[,i], xlab = names(data[i]),
+          main = names(data[i]), col="grey", ylab="")
+}
+```
+
+And finally we will review the histograms of the predictors to see the distribution and the skew.
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data)){
+hist(data[,i], xlab = names(data[i]),
+  main = names(data[i]), col="grey", ylab="")
+}
+
+```
+
+
+Next we will impute the missing data. Even though we have 2 predictors that have a lot of missing values, we will use them nevertheless and review the results. When we get to model selection, we will try a model with the predictors that have been heavily imputed and compare to the model without them.
+
+For imputation we will use missForest package which will choose the best suited method and will impute the missing data.
+
+```{r}
+#Impute
+
+library(missForest)
+dataMod = missForest(data)
+#dataMod$OOBerror
+dataImp <- dataMod$ximp
+```
+
+Lets review the imputed data and scan for missing values.
+
+```{r}
+colSums(is.na(dataImp))
+```
+
+We no longer have any missing values and we are clear to proceed further.
+
+Next we will create the correlation plot to visually identify correlated predictors.
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(dataImp)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+## 3. Data Preparation
+
+
+Next we will use the Boxcos transformation to normalize the data. Once normalized, this will allow us to better work with the data.  We will use Boxcox transformation to automatically select the appropriate transformation algorytm for our data
+
+```{r}
+#Boxcox
+library(caret)
+dataB = preProcess(dataImp, c("BoxCox", "center", "scale"))
+datanorm = data.frame(dataB = predict(dataB, dataImp))
+```
+
+Next we will visualize data to see how well it was normalized after boxcox transformation and compare the results to the histograms before we applied the transformation.
+
+```{r}
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(datanorm)){
+hist(datanorm[,i], xlab = names(datanorm[i]),
+  main = names(datanorm[i]), col="grey", ylab="")
+}
+
+colnames(datanorm) = gsub("dataB.", "", colnames(datanorm))
+```
+
+We can see that boxcox transformation has had a very positive result on the dataset and data is now normalized for the most part.
+
+
+## 4. Build Model
+
+First we will create a basic model consisting of all imputed data
+
+```{r}
+model1 = (lm(TARGET_WINS ~ ., data=datanorm))
+summary(model1)
+```
+
+Next we will remove the heavily imputed predictors and compare the results
+
+```{r}
+model2 = lm(TARGET_WINS ~ . - TEAM_BASERUN_CS - TEAM_BATTING_HBP, data=datanorm)
+summary(model2)
+```
+
+So it appears that imputing the 2 columns did not hurt our model in fact the extra data slightly helps the model so we will leave those in.
+
+For the next model we will try to eliminate some of the highly correlated predictors, so we will run correlation matrix again on the normalized data 
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(datanorm)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+
+We will remove TEAM_BATTING_HR and TEAM_FIELDING_E as they are very highly correlated to other predictors
+
+```{r}
+model3 = lm(TARGET_WINS ~ . - TEAM_BATTING_HR -TEAM_FIELDING_E , data=datanorm)
+summary(model3)
+```
+
+It appears that removing highly correlated predictors also does not help our model.
+ 
+After comparing RMSE, R-squared and F-statistics of the 3 models, we will go ahead and use the model1 it is the simplest model and uses all the predictors, but since we did not find any significant benefit with other models, We will use the simplest model containing all the predictors. 
+
+
+## 5. Select Model
+
+We decided to select the final model as it is the model in its purest form containing all the predictors, we tried to omit imputed data, drop some of the highly correlated predictors and removing some of the less relevant predictors, but did not see much improvement, therefore we decided to stay with the base model.
+
+Next we will review residual plot and qqplot of the model. We want to make sure the residuals are random and the variance is constant.
+
+```{r}
+plot(model1$residuals)
+```
+
+
+
+```{r}
+qqnorm(model1$residuals)
+qqline(model1$residuals)
+```
+
+
+
+```{r}
+data_pred <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw1/moneyball-evaluation-data.csv", header = TRUE)
+
+#Impute data
+data_pred1 = missForest(data_pred)
+data_pred2 <- data_pred1$ximp
+
+pred = predict(model1, newdata = data_pred2)
+write.csv(pred, '621hw1_predictions.csv')
+```
+
+## References
+
+Complete code is located at:
+https://github.com/jelikish/Cuny1/blob/master/Spring2018/621/hw1

@@ -2,7 +2,7 @@
 title: "624HW3"
 author: "Joseph Elikishvili"
 date: "September 16, 2017"
-output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
