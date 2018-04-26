@@ -1,0 +1,297 @@
+---
+title: "hw3"
+author: "Joseph Elikishvili"
+date: "April 16, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library(psych)
+library(knitr)
+```
+### Overview 
+
+In this project, we will explore, analyze and model a data set containing information on crime for various neighborhoods of a major city. Each record has a response variable indicating whether or not the crime rate is above the median crime rate (1) or not (0).
+Our objective is to build a binary logistic regression model on the training data set to predict whether the neighborhood will be at risk for high crime levels. We will provide classifications and probabilities
+for the evaluation data set using your binary logistic regression model. 
+
+
+### 1. Data Exploration
+
+We will get started by loading the data and exploring the dimensions of the dataset and getting to know the variables
+
+```{r}
+data <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw3/crime-training-data_modified.csv", header = TRUE)
+testdata <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw3/crime-evaluation-data_modified.csv", header = TRUE)
+
+dim(data)
+```
+
+It appears we are dealing with a total of 13 variables and 466 records.
+
+Next we will preview the data in raw format
+
+```{r}
+head(data)
+```
+
+We can see that we have a target variable which is in a binary format and we have 12 predictor variables some being categorical. This should not be an issue for a logistic binary regression as it can handle both numerical and categorical values.
+
+Next we will check data for any missing values and develope a strategy to deal with those if we find any
+```{r}
+colSums(is.na(data))
+```
+
+We can also visually check to see if there are any missing values, in this case it might not help us much but normally it is always helpful to visualize data and see how much data is missing by various predictors relative to others, we will use Amelia library to do that.
+
+```{r}
+library(Amelia)
+missmap(data, main = "Missing values")
+```
+
+It appears we have a pretty clean data set and we do not have any missing values, so we can proceed to the next step
+
+We will set 80 records aside for validation and testing and train our models on the remaining 386 records.
+```{r}
+test = data[366:466,]
+train = data[0:365,]
+#train_target = test$target
+#train$target = NULL
+```
+
+Next we will review the predictors given to us to better understand the data we are dealing with. The table gives us a basic overview of the data
+
+```{r}
+target= train$target
+train$target = NULL
+table.desc <- describe(train)
+table.prep <- as.matrix(table.desc)
+table.round <- round((table.prep), 2)
+kable(table.round)
+#-------------------
+```
+
+Next we will create a boxplot of each of the predictors to visualize the variability of the data, showing us the variability of the data, the range and various other metrics that allow us to get a better sense of the data we are dealing with.
+
+```{r}
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(train)){
+  boxplot(train[,i], xlab = names(train[i]),
+          main = names(train[i]), col="grey", ylab="")
+}
+```
+
+And finally we will review the histograms of the predictors to see the distribution and the skew.
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(train)){
+hist(train[,i], xlab = names(train[i]),
+  main = names(train[i]), col="grey", ylab="")
+}
+
+```
+
+Next we will create the correlation plot to visually identify correlated predictors.
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(train)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+We can see that There are some highly correlated variables. We see that tax variable is correlated to rad, we also see some negative correlations, for example dis is negatively correlated to dis is highly correlated to target and to age, indus and nox, also medv is highly correlated to lstat. We can use this information later in model selection to fine tune our model, but for now we will simply make a note of the existing correlations.
+
+
+### 2. DATA PREPARATION
+
+Next we will use the Boxcox transformation to normalize the data. Once normalized, this will allow us to better work with the data.  We will use Boxcox transformation to automatically select the appropriate transformation algorithm for our data
+
+```{r}
+#Boxcox
+library(caret)
+dataB = preProcess(train, c("BoxCox", "center", "scale"))
+datanorm = data.frame(dataB = predict(dataB, train))
+#Fix the colnames
+colnames(datanorm) = colnames(train)
+```
+
+Next we will visualize data to see how well it was normalized after boxcox transformation and compare the results to the histograms before we applied the transformation.  
+
+```{r}
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(datanorm)){
+hist(datanorm[,i], xlab = names(datanorm[i]),
+  main = names(datanorm[i]), col="grey", ylab="")
+}
+
+colnames(datanorm) = gsub("dataB.", "", colnames(datanorm))
+```
+
+Since we are dealing with the dataset that contains a some categorical variables and some variables that have been created as a result of binning of certain categories, it seems that boxcox transformation has not produced any improvements, so we will use the raw data for this study.
+
+### 3. BUILD MODELS
+
+We will use logit model in order to construct pur models since it seems that logit is the preferred option over probit model.
+
+#### Model1
+
+For model1 we will use all predictor variables, since we do not have an excessive number of variables it is reasonable to expect that each variable will have some contributing factor to the model. We will use this model and compare all future results against this one.
+
+```{r}
+model1 = glm(target ~ ., family = binomial(link = "logit"), data = train)
+model1
+```
+
+### Model2
+
+For the model2 we will try to remove some of the high correlated variables and decrease overal correlation within the dataset. We will remove rad variable since it is correlated with tax and we will remove dis since it is corelated with age, indus and nox. We will also remove lstat as it is correlated with medv variable.  We will check the correlation plot to make sure high correlations are removed
+
+```{r}
+train1=train
+train1$rad = NULL
+train1$dis = NULL
+train1$lstat = NULL
+correlations <- cor(train1)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+We can see that the highest correlations have been removed from the dataset. Next we will build a model and check the results.
+
+```{r}
+model2 = glm(formula = target ~ ., family = binomial(link = "logit"), data = train1)
+model2
+```
+
+We can see that model 2 is not as accurate as model 1, so removing highly correlated predictors did not have a positive impact on the mmodel accuracy.
+
+### Model3
+
+Since we determined that removing highly correlated variables did not improve our model, we will use model1 and try to improve it by using stepwise procedure and see the variable selection it produces. We will run 3 test variations using backwards, forward and full and see what the experiment shows us, also instead of using logit, we will try and use probit and see what results we get comparable to model1
+
+```{r}
+model3 = glm(formula = target ~ ., family = binomial(link = "probit"), data = train)
+model3
+```
+
+```{r}
+library(MASS)
+forward = stepAIC(model3, direction="forward", trace=FALSE)
+```
+
+```{r}
+back = stepAIC(model3, direction="backward", trace=FALSE)
+```
+
+```{r}
+full = stepAIC(model3, trace=FALSE)
+```
+
+### Full stepwise
+```{r}
+summary(full)
+```
+
+### Forward stepwise
+```{r}
+summary(forward)
+```
+
+### Backward Stepwise
+```{r}
+summary(back)
+model3=forward
+```
+
+It appears that forward stepwise method is producing the most accurate results with the lowest deviance. So we came to the same conclusion that using all predictor variables produces the most accurate model. We will select stepwise forward as model3 as it had the lowest deviance score.
+
+## 4. SELECT MODELS 
+
+We will do some further analyses and will determine how well each of the models actually predicts and compare various metrics such as sensitivity, specificity and others.
+
+### Model1 
+```{r}
+p1 = predict(model1,test, type="response")
+pf1 = ifelse(p1<.5,0,1)
+mat1 = confusionMatrix(pf1, test$target, positive='1')
+mat1$table
+```
+
+```{r}
+mat1$byClass
+```
+
+```{r}
+library("pROC")
+plot(roc(pf1, test$target),main="Model1 ROC")
+```
+
+```{r}
+auc(roc(pf1, test$target))
+```
+
+### Model2
+```{r}
+p2 = predict(model2,test, type="response")
+pf2 = ifelse(p2<.5,0,1)
+mat2 = confusionMatrix(pf2, test$target, positive='1')
+mat2$table
+```
+
+```{r}
+mat2$byClass
+```
+
+```{r}
+plot(roc(pf2, test$target),main="Model2 ROC")
+```
+
+```{r}
+auc(roc(pf2, test$target))
+```
+
+
+### Model3
+```{r}
+p3 = predict(model3,test, type="response")
+pf3 = ifelse(p3<.5,0,1)
+mat3 = confusionMatrix(pf3, test$target, positive='1')
+mat3$table
+```
+
+```{r}
+mat3$byClass
+```
+
+```{r}
+plot(roc(pf3, test$target),main="Model3 ROC")
+```
+
+```{r}
+auc(roc(pf3, test$target))
+```
+
+
+### Final Model
+
+After running the tests we can see that Model2 has significantly underperformed Model1 and Model3 we can see that across all the metrics as it shows higher deviance, lower sensitivity, specificity and AUC score. 
+
+Choosing between model1 and model3 is more difficult since the results are pretty close, but Model3 does outperform Model1, it has better AUC numbers as well as higher sensitivity and specificity rates, Since results are pretty close, I wanted to make sure that its not random and ran model1 and model3 on slightly higher number of test records, as I increased the number of test records, model 3 kept outperforming model1, it seems that at 80 test records they are have the same metrics, but as the number increases model3 is more accurate, so out of the 3 models we will choose Model3 as it is has the best predictive performance and good sensitivity and AUC rates. 
+
+### Predicting on testdata
+
+We will use model3 to make the predictions on our test dataset. The following are the predictions, you can see the predictions in target column:
+
+```{r}
+predict = predict(model3,testdata, type="response")
+predictf = ifelse(predict<.5,0,1)
+testdata$target = predictf
+kable(testdata)
+```
+
+### Appendix A 
+
+R markdown file with code available at:  https://github.com/jelikish/Cuny1/tree/master/Spring2018/621/hw3
