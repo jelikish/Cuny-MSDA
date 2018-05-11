@@ -1,0 +1,525 @@
+---
+title: "Data621-Hw4"
+author: "Joseph Elikishvili"
+date: "May 2, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library(psych)
+library(knitr)
+```
+
+### Overview 
+
+In this project, we will explore, analyze and model a data set containing approximately 8000 records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A "1" means that the person was in a car crash.  A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero. Our objective is to build multiple linear regression and binary logistic regression models on the training data to predict the probability that a person will crash their car and also the amount of money it will cost if the person does crash their car. We can only use the variables given to us (or variables that you derive from the variables provided).
+
+### 1. Data Exploration
+
+We will get started by loading the data and exploring the dimensions of the dataset and getting to know the variables
+
+```{r}
+data <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw4/insurance_training_data.csv", header = TRUE, stringsAsFactors = FALSE)
+testdata <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw4/insurance-evaluation-data.csv", header = TRUE)
+
+dim(data)
+```
+
+It appears we have a total of 26 variables and 8161 records.  The first variable is an index so we will remove it right away as it provides no value to us, so we are dealing with 25 variables total, 2 target  variables and 23 predictor variables.
+
+```{r}
+data$INDEX =NULL
+```
+
+Next we will preview datatypes in each of the columns
+
+```{r}
+str(data)
+```
+
+It appears there are several things we need to do in orer to clean our data. 
+1. First we need to convert all USD from string to numeric and get rid of $ signs and , signs.  This affects 4 colomns.
+2. Next we will need to fix some of the '_z' and '<' that made it into the set affecting some of the categorical variables and may disrupt the model later on.
+
+
+Lets go ahead and fix the $ amounts first in columns: INCOME, HOME_VAL, BLUEBOOK, OLDCLAIM
+And then remove the '<' character and '_z' character from columns: MSTATUS, SEX, EDUCATION, JOB, CAR_TYPE, URBANCITY
+
+```{r}
+#Convert $ to numeric
+#https://stackoverflow.com/questions/31944103/converting-currency-with-commas-into-numeric
+data$INCOME <- as.numeric(gsub('[$,]', '', data$INCOME))
+data$HOME_VAL  <- as.numeric(gsub('[$,]', '', data$HOME_VAL))
+data$BLUEBOOK  <- as.numeric(gsub('[$,]', '', data$BLUEBOOK))
+data$OLDCLAIM  <- as.numeric(gsub('[$,]', '', data$INCOME))
+
+
+#Get rid of '<' and '_z'
+data$MSTATUS = (gsub('[_z]', '', data$MSTATUS))
+data$MSTATUS = (gsub('[<]', '', data$MSTATUS))
+
+data$SEX = (gsub('[_z]', '', data$SEX))
+data$SEX = (gsub('[<]', '', data$SEX))
+
+data$EDUCATION = (gsub('[_z]', '', data$EDUCATION))
+data$EDUCATION = (gsub('[<]', '', data$EDUCATION))
+
+data$JOB = (gsub('[_z]', '', data$JOB))
+data$JOB = (gsub('[<]', '', data$JOB))
+
+data$CAR_TYPE = (gsub('[_z]', '', data$CAR_TYPE))
+data$CAR_TYPE = (gsub('[<]', '', data$CAR_TYPE))
+
+data$URBANICITY = (gsub('[_z]', '', data$URBANICITY))
+data$URBANICITY = (gsub('[<]', '', data$URBANICITY))
+
+```
+
+
+Now our data is clean and we can move to the next step and check data for any missing values and develope a strategy to deal with those if we find any
+```{r}
+colSums(is.na(data))
+```
+
+Lets also visually check to see if there are any missing values,  we will use Amelia library to do that and review results.
+
+```{r}
+library(Amelia)
+missmap(data, main = "Missing values")
+```
+
+We can see that we have a total of 6 columns with missing data, 5 columns with roughly 450-500 missing values and Age is only missing 6 values.
+
+
+Next we will review the predictors given to us to better understand the data we are dealing with. The table gives us a basic overview of the data
+
+```{r}
+#target= data$TARGET_FLAG
+#data$TARGET_FLAG = NULL
+table.desc <- describe(data)
+table.prep <- as.matrix(table.desc)
+table.round <- round((table.prep), 2)
+kable(table.round)
+#-------------------
+```
+
+
+Next we will deal with the issue of missing variables. We have 2 options, either impute the missing variables or remove them.  Normally we impute the variables as we want to have as many records as we can get to better our models. But in this case, I feel that it will be better to remove the rows with missing data. Since we have over 8000 records and will be left with about 6000, removing the records won't affect the accuracy. Also it is not clear weather some of the missing data actually means something, so by imputing that data, we will be in fact disrupting it. So we will remove records containing any missing data and proceed.
+```{r}
+#data_new = cbind(noncat, cat)
+
+data = na.omit(data)
+#noncat = subset(data_naremoved, select=c(TARGET_AMT, AGE, YOJ, INCOME, HOME_VAL, TRAVTIME, BLUEBOOK, TIF, OLDCLAIM, CAR_AGE))
+```
+
+```{r}
+
+#target_flag = data$TARGET_FLAG
+#target_amount = data$TARGET_AMT
+#data$TARGET_FLAG = NULL
+#data$TARGET_AMT = NULL
+
+
+#Continious
+noncat = subset(data, select=c(AGE, YOJ, INCOME, HOME_VAL, TRAVTIME, BLUEBOOK, TIF, OLDCLAIM, CAR_AGE))
+
+#Categorical
+#cat = subset(data, select=c(KIDSDRIV, HOMEKIDS, PARENT1, MSTATUS, SEX, EDUCATION, JOB, CAR_USE, CAR_TYPE, RED_CAR, REVOKED, URBANICITY, CLM_FREQ))
+
+
+```
+
+
+
+We will separate continous variables to take a closer look at them sepratly, also we will remove factors from categegircal variables and convert them to numerical values as we are having difficulty working with data in current format, also it appears that MSTATUS variables has chararcter strings No and Yes, we will replace those with numerical 0 and 1 so that we can use this values in our models.
+
+```{r}
+data$PARENT1 = as.numeric(factor(data$PARENT1))
+data$SEX = as.numeric(factor(data$SEX))
+data$EDUCATION = as.numeric(factor(data$EDUCATION))
+data$JOB = as.numeric(factor(data$JOB))
+data$CAR_USE = as.numeric(factor(data$CAR_USE))
+data$CAR_TYPE = as.numeric(factor(data$CAR_TYPE))
+data$RED_CAR = as.numeric(factor(data$RED_CAR))
+data$REVOKED = as.numeric(factor(data$REVOKED))
+data$URBANICITY = as.numeric(factor(data$URBANICITY))
+data$MSTATUS = ifelse(data$MSTATUS =="Yes", 1, 0)
+
+str(data)
+```
+
+Now our data is clean, has all the data types we can use in our models and we can start working  with it.
+
+We will first plot the histograms and review how data is distributed
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data)){
+hist(data[,i], xlab = names(data[i]),
+  main = names(data[i]), col="grey", ylab="")
+}
+
+```
+
+It appears that some of the continius variables are sked, but since we separted them we will work on transformation later on.
+
+
+
+
+
+Next we will create the correlation plot to visually identify correlated predictors.
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(data)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+Overall looks like variables are not heavily correlated. We have couple of instances of high correlations like INCOME and OLDCLAIM, but other then that correlation should not be a big issue for us.
+
+### 2 DATA PREPARATION
+
+
+```{r}
+#Boxcox
+library(caret)
+dataB = preProcess(noncat, c("BoxCox", "center", "scale"))
+datanorm = data.frame(dataB = predict(dataB, noncat))
+#Fix the colnames
+colnames(datanorm) = colnames(noncat)
+```
+
+#### Raw Continious variables
+
+Since we detected some skewness in data, we separated some of the continuos variables, lets view them as histograms
+
+```{r}
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(noncat)){
+hist(noncat[,i], xlab = names(noncat[i]),
+  main = names(noncat[i]), col="grey", ylab="")
+}
+```
+
+#### Box Cox Transformed
+
+Now lets use Box-cox transformation and review the histograms to the raw data above
+```{r}
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(datanorm)){
+hist(datanorm[,i], xlab = names(datanorm[i]),
+  main = names(datanorm[i]), col="grey", ylab="")
+}
+```
+
+It appears that we have not fully removed skew, but we have certianly improved the distribution in our continous variables. So we will use the transformed continous predictor variables so we will merge them with our catigorical variables.
+
+```{r}
+data$AGE = datanorm$AGE
+data$YOJ = datanorm$YOJ
+data$INCOME = datanorm$INCOME
+data$HOME_VAL = datanorm$HOME_VAL
+data$TRAVTIME = datanorm$TRAVTIME
+data$BLUEBOOK = datanorm$BLUEBOOK
+data$TIF = datanorm$TIF
+data$OLDCLAIM = datanorm$OLDCLAIM
+data$CAR_AGE = datanorm$CAR_AGE
+
+library(dplyr)
+data <- data %>% droplevels()
+#str(data)
+```
+
+Next we will split our data and assign 70% for training and 30% for validation.
+```{r}
+dim(data)
+indexes = sample(1:nrow(data), size=0.7*nrow(data))
+
+# Split data
+test = data[indexes,]
+dim(test)
+train = data[-indexes,]
+dim(train)
+```
+
+### 3. Build Model
+
+At this point we are ready to start building our models. We need to build 2 models. The first model will be logistic regression model and will be tasked with predicting if this person was in the car crash. Once we have that, our next model will be tasked with predicting the target amount as a result. We will be using a linear regression model for that.
+
+#### Model 1.1
+
+For our first model we will use all available to use variables and see how they perform. This model will act as a benchmark for the rest and we will see if we cab improve results from here.
+
+```{r}
+model1 = glm(TARGET_FLAG ~ .-TARGET_AMT, family = binomial(link = "logit"), data = train)
+#model1
+summary(model1)
+```
+
+#### Model 1.2
+
+For the second model we will remove OLD_MODEL variable, it was highly correlated with INCOME and also it does not provide any benefit as we can clearly see from above, we will see if removing it will improve our results.
+
+```{r}
+train1 = train
+train1$OLDCLAIM = NULL
+model12 = glm(TARGET_FLAG ~ .-TARGET_AMT, family = binomial(link = "logit"), data = train1)
+#model12
+summary(model12)
+```
+
+
+#### Model 1.3
+
+For the 3rd model, we will try to remove all variables that have p value higher then 0.05 as they are not significant.  We will see if qwe get better results
+
+```{r}
+train1$BLUEBOOK = NULL
+train1$SEX = NULL
+train1$AGE = NULL
+train1$RED_CAR = NULL
+
+model13 = glm(TARGET_FLAG ~ .-TARGET_AMT, family = binomial(link = "logit"), data = train1)
+summary(model13)
+```
+
+#### Linear Model
+
+Here we will recreate train and test set but based only on the subset we are interested in which is where person was involved in a car crash. We will then create train and test data set similar to how we did it above.
+
+```{r}
+data_lm = subset(data, TARGET_FLAG == 1)
+
+indexes = sample(1:nrow(data_lm), size=0.7*nrow(data_lm))
+
+# Split data
+test_lm = data_lm[indexes,]
+dim(test_lm)
+train_lm = data_lm[-indexes,]
+dim(train_lm)
+
+```
+
+#### Model 2.1
+
+We will start with including of every possible predictor to establish a benchmark model
+```{r}
+model21 = lm(TARGET_AMT ~ .-TARGET_FLAG, data = train_lm)
+summary(model21)
+```
+
+#### Model 2.2
+
+Next we will use Stepwise selection to see if we can come up with better results, we will try all 3 methods.
+
+```{r}
+model22 = lm(TARGET_AMT ~ .-TARGET_FLAG, data = train_lm)
+#summary(model21)
+library(MASS)
+forward = stepAIC(model21, direction="forward", trace=FALSE)
+```
+
+```{r}
+back = stepAIC(model21, direction="backward", trace=FALSE)
+```
+
+```{r}
+full = stepAIC(model21, trace=FALSE)
+```
+
+#### Full stepwise
+```{r}
+summary(full)
+```
+
+#### Forward stepwise
+```{r}
+summary(forward)
+```
+
+#### Backward Stepwise
+```{r}
+summary(back)
+```
+
+#### Model 2.3
+Since the Backward model selected only 2 predictors Sex and Bluebook, but Sex actually has a p value higher then 0.05, we can try to remove it and run the model basaed on just Bluebook.
+
+```{r}
+model23 = lm(TARGET_AMT ~ BLUEBOOK, data = train_lm)
+summary(model23)
+```
+
+### 4. SELECT MODELS 
+
+In this section we will closely review all the trest models and select 2 models we will use to complete our forecast. We will use a number of various metrics to do that.
+
+#### Model1.1 
+
+
+```{r}
+p1 = predict(model1,test, type="response")
+pf1 = ifelse(p1<.5,0,1)
+mat1 = confusionMatrix(pf1, test$TARGET_FLAG, positive='1')
+mat1$table
+```
+
+```{r}
+mat1$byClass
+```
+
+```{r}
+library("pROC")
+plot(roc(pf1, test$TARGET_FLAG),main="Model1 ROC")
+```
+
+```{r}
+auc(roc(pf1, test$TARGET_FLAG))
+```
+
+#### Model1.2 
+
+Since model12 has not improved our results and seems to have same results, we will skip it and move to model 1.3
+
+#### Model1.3 
+
+```{r}
+p13 = predict(model13,test, type="response")
+pf13 = ifelse(p13<.5,0,1)
+mat13 = confusionMatrix(pf13, test$TARGET_FLAG, positive='1')
+mat13$table
+```
+
+```{r}
+mat13$byClass
+```
+
+```{r}
+library("pROC")
+plot(roc(pf13, test$TARGET_FLAG),main="Model1.3 ROC")
+```
+
+```{r}
+auc(roc(pf13, test$TARGET_FLAG))
+```
+
+### Final Models 
+
+For the final Logistic Regression model we will choose model1 for Logistic regression model. It has better AUC, sensitivity and pretty much every other score, so we will use model1.
+
+For the final linear regression model we will go with the model generated by backward stepwiseas it has the lowest RMSE.
+
+### Predicting on testdata
+
+Sine we have altered the training set we will have to do the same for the test set in order to make the predictions. Additionaly we will need to deal with missing data since we cannot predict on the records that is missing data. We could ommit the records with missing data, but since we do not know weather this is acceptable, we will go ahead and impute the missing data in testset and predict based on that.
+
+```{r}
+
+
+testdata$INDEX = NULL
+testdata$INCOME <- as.numeric(gsub('[$,]', '', testdata$INCOME))
+testdata$HOME_VAL  <- as.numeric(gsub('[$,]', '', testdata$HOME_VAL))
+testdata$BLUEBOOK  <- as.numeric(gsub('[$,]', '', testdata$BLUEBOOK))
+testdata$OLDCLAIM  <- as.numeric(gsub('[$,]', '', testdata$INCOME))
+
+
+#Get rid of '<' and '_z'
+testdata$MSTATUS = (gsub('[_z]', '', testdata$MSTATUS))
+testdata$MSTATUS = (gsub('[<]', '', testdata$MSTATUS))
+
+testdata$SEX = (gsub('[_z]', '', testdata$SEX))
+testdata$SEX = (gsub('[<]', '', testdata$SEX))
+
+testdata$EDUCATION = (gsub('[_z]', '', testdata$EDUCATION))
+testdata$EDUCATION = (gsub('[<]', '', testdata$EDUCATION))
+
+testdata$JOB = (gsub('[_z]', '', testdata$JOB))
+testdata$JOB = (gsub('[<]', '', testdata$JOB))
+
+testdata$CAR_TYPE = (gsub('[_z]', '', testdata$CAR_TYPE))
+testdata$CAR_TYPE = (gsub('[<]', '', testdata$CAR_TYPE))
+
+testdata$URBANICITY = (gsub('[_z]', '', testdata$URBANICITY))
+testdata$URBANICITY = (gsub('[<]', '', testdata$URBANICITY))
+
+
+
+testdata$PARENT1 = as.numeric(factor(testdata$PARENT1))
+testdata$SEX = as.numeric(factor(testdata$SEX))
+testdata$EDUCATION = as.numeric(factor(testdata$EDUCATION))
+testdata$JOB = as.numeric(factor(testdata$JOB))
+testdata$CAR_USE = as.numeric(factor(testdata$CAR_USE))
+testdata$CAR_TYPE = as.numeric(factor(testdata$CAR_TYPE))
+testdata$RED_CAR = as.numeric(factor(testdata$RED_CAR))
+testdata$REVOKED = as.numeric(factor(testdata$REVOKED))
+testdata$URBANICITY = as.numeric(factor(testdata$URBANICITY))
+testdata$MSTATUS = ifelse(testdata$MSTATUS =="Yes", 1, 0)
+
+testdata$TARGET_AMT = as.numeric(factor(testdata$TARGET_AMT))
+
+noncat = subset(testdata, select=c(AGE, YOJ, INCOME, HOME_VAL, TRAVTIME, BLUEBOOK, TIF, OLDCLAIM, CAR_AGE))
+
+#library(caret)
+dataB = preProcess(noncat, c("BoxCox", "center", "scale"))
+datanorm = data.frame(dataB = predict(dataB, noncat))
+#Fix the colnames
+colnames(datanorm) = colnames(noncat)
+
+testdata$AGE = datanorm$AGE
+testdata$YOJ = datanorm$YOJ
+testdata$INCOME = datanorm$INCOME
+testdata$HOME_VAL = datanorm$HOME_VAL
+testdata$TRAVTIME = datanorm$TRAVTIME
+testdata$BLUEBOOK = datanorm$BLUEBOOK
+testdata$TIF = datanorm$TIF
+testdata$OLDCLAIM = datanorm$OLDCLAIM
+testdata$CAR_AGE = datanorm$CAR_AGE
+
+#library(dplyr)
+testdata <- testdata %>% droplevels()
+#str(testdata)
+
+#Impute data
+library(missForest)
+data_pred1 = missForest(testdata)
+data_pred2 <- data_pred1$ximp
+
+data_pred2$TARGET_AMT = NA
+data_pred2$TARGET_FLAG = NA
+data_pred2$TARGET_AMT = as.numeric(factor(data_pred2$TARGET_AMT))
+
+#pred = predict(model1, newdata = data_pred2)
+#write.csv(pred, '621hw1_predictions.csv')
+```
+
+
+Previewing first 30 Records
+
+```{r}
+#Run logistic regression forcast
+predict = predict(model1,newdata=data_pred2, type="response")
+predictf = ifelse(predict<.5,0,1)
+testdata$TARGET_FLAG = predictf
+#predictf
+
+
+#Run linear regression forcast
+pred_lin = predict(back, newdata = data_pred2)
+testdata$TARGET_AMT = pred_lin
+testdata$TARGET_AMT[testdata$TARGET_FLAG == 0] <- 0
+
+show = subset(testdata, select=c(TARGET_FLAG, TARGET_AMT))
+show1 = head(show, 30)
+kable(show1)
+
+#Save to csv
+write.csv(testdata, '621hw4_predictions.csv')
+```
+
+### Appendix A 
+
+R markdown file with code along with full predictions csv file available at:  https://github.com/jelikish/Cuny1/tree/master/Spring2018/621/hw4
+
