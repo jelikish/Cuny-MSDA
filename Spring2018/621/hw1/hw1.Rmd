@@ -2,7 +2,7 @@
 title: "Data621-hw1"
 author: "Joseph Elikishvili"
 date: "February 26, 2018"
-output: word_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
