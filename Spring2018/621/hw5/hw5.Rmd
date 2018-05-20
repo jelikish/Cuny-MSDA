@@ -1,0 +1,315 @@
+---
+title: "hw5"
+author: "Joseph Elikishvili"
+date: "May 15, 2018"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library(psych)
+library(knitr)
+```
+
+### Overview
+
+In this assignment, we will explore, analyze and model a data set containing information on approximately 12,000 commercially available wines. The variables are mostly related to the chemical properties of the wine being sold. The response variable is the number of sample cases of wine that were purchased by wine distribution companies after sampling a wine. These cases would be used to provide tasting samples to restaurants and wine stores around the United States. The more sample cases purchased, the more likely is a wine to be sold at a high end restaurant. A large wine manufacturer is studying the data in order to predict the number of wine cases ordered based upon the wine characteristics. If the wine manufacturer can predict the number of cases, then that manufacturer will be able to adjust their wine offering to maximize sales. Your objective is to build a count regression model to predict the number of cases of wine that will be sold given certain properties of the wine. HINT: Sometimes, the fact that a variable is missing is actually predictive of the target. You can only use the variables given to you (or variables that you derive from the variables provided).
+
+
+
+We will get started by loading the data and exploring the dimensions of the data set and getting to know the variables
+
+```{r}
+data <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw5/wine-training-data.csv", header = TRUE, stringsAsFactors = FALSE)
+testdata <- read.csv("https://github.com/jelikish/Cuny1/raw/master/Spring2018/621/hw5/wine-evaluation-data.csv", header = TRUE)
+
+dim(data)
+```
+
+It appears we have over 12000 records and 16 variables, one is our target variable and one of the predictor variables is just an index that we will remove so we have 14 predictor variables, 1 target and 12795 records.
+
+```{r}
+data$ï..INDEX =NULL
+```
+
+Next we will preview datatypes in each of the columns
+
+```{r}
+str(data)
+```
+
+It appears that most of the variables are either in the num or int format which is good for us and will require less data transformation.
+
+
+
+Now our data is clean and we can move to the next step and check data for any missing values and develop a strategy to deal with those if we find any
+```{r}
+colSums(is.na(data))
+```
+
+Lets also visually check to see if there are any missing values,  we will use Amelia library to do that and review results.
+
+```{r}
+library(Amelia)
+missmap(data, main = "Missing values")
+```
+
+It appears there are 8 predictor variables that have some missing data and the amount of missing data ranges from 395 to 3359 in case of STARS.  But overall we have a good data set and a good number of records to work with.
+
+Next we will review the predictors given to us to better understand the data we are dealing with. The table gives us a basic overview of the data
+
+```{r}
+#target= data$TARGET_FLAG
+#data$TARGET_FLAG = NULL
+table.desc <- describe(data)
+table.prep <- as.matrix(table.desc)
+table.round <- round((table.prep), 2)
+kable(table.round)
+#-------------------
+```
+
+
+Next we will create a box plot of each of the predictors to visualize the variability of the data
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data)){
+  boxplot(data[,i], xlab = names(data[i]),
+          main = names(data[i]), col="grey", ylab="")
+}
+```
+
+And finally we will review the histograms of the predictors to see the distribution and the skew.
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data)){
+hist(data[,i], xlab = names(data[i]),
+  main = names(data[i]), col="grey", ylab="")
+}
+
+```
+
+It appears most of the data is well distributed and well centered and does not require much transformation.  We do however see some negative values and they will need to be addressed. Also we need to impute some of the missing data.
+
+
+We will start with Stars and replace N/a with 0 with the assumption that the 0 stars were simply not rated and not given a rating
+```{r}
+data$STARS[is.na(data$STARS)] <- 0
+```
+
+
+Next we will get rid of all the negative values in the data set since most of the predictors cannot have a negative value, we are making an assumption that it was simply a mistake and we will use an absolute value to remove any negative signs and retain the data we prefer this method over simply replacing the negative values by 0 since that would potentially alter data and have a major impact. 
+```{r}
+data[] <- lapply(data, abs)
+```
+
+
+
+Next we will impute the missing data in the rest of the predictor variables. we will use missforest library, which takes a while to run but does a great job with imputation
+
+```{r}
+#Impute
+
+library(missForest)
+dataimp = missForest(data)
+#dataMod$OOBerror
+dataMod <- dataimp$ximp
+
+#library(mice)
+#dataimp = mice(data, m = 2, maxit =2, print = FALSE)
+#dataMod = dataimp$data
+```
+
+
+At this point our data should be ready for the next step, Lets review histograms after imputation
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(dataMod)){
+hist(dataMod[,i], xlab = names(dataMod[i]),
+  main = names(dataMod[i]), col="grey", ylab="")
+}
+
+```
+
+It appears that the data is now skewed to the right, but since we performed a removal of the negative sign, we will go ahead and leave the data unchanged and will not perform a box-cox transformation as it will take us one step further from the original raw data. 
+
+
+
+
+Finally we will review a Correlation plot to see any existing correlations within out data set. 
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(dataMod)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+We do not see any major correlations that need to be addressed, so we are ready to start building our models
+
+## Build Models
+
+Before we proceed, We will create a holdout data set for validation, we will use 70% for training and 30% for validation purposes.
+
+```{r}
+dim(dataMod)
+indexes = sample(1:nrow(dataMod), size=0.7*nrow(dataMod))
+
+# Split data
+test = dataMod[indexes,]
+dim(test)
+train = dataMod[-indexes,]
+dim(train)
+```
+
+### Poison Models
+We will start with poison model and will start first with the model that takes all predictors.
+
+```{r}
+model_p1 <- glm(TARGET ~ . , data=train, family="poisson")
+summary(model_p1)
+```
+
+Next we will use Step-wise backward method to eliminate the insignificant variables.
+
+```{r}
+library(MASS)
+model_p2 = stepAIC(model_p1, direction="backward", trace=FALSE)
+summary(model_p2)
+```
+
+### Negative Binomial Models
+
+We will do the same for the binomial model and use all predictors first for a baseline model
+
+```{r}
+model_nb1 <- glm.nb(TARGET ~ . , data=train)
+summary(model_nb1)
+```
+
+And use the Step-wise backwards method for the second model.
+
+```{r}
+model_nb2 = stepAIC(model_nb1, direction="backward", trace=FALSE)
+summary(model_nb2)
+```
+
+### Linear Models
+
+Next we will create the linear model
+
+```{r}
+model_lm1 = lm(TARGET ~ . , data = train)
+summary(model_lm1)
+```
+
+And the Linear model using Step-wise backwards method
+
+```{r}
+model_lm2 = stepAIC(model_lm1, direction="backward", trace=FALSE)
+summary(model_lm2)
+```
+
+
+### Zero Inflated Poison
+
+Finally we will use Zero inflated model which is used when we have an excess count of 0 values and it could be a suitable for our case.  We will start with a base model
+
+```{r}
+library(pscl)
+model_zi1 = zeroinfl(TARGET ~. , data = train, dist = 'negbin')
+summary(model_zi1)
+```
+
+And finally we will use zero inflation model combined with the predictor variables that were chosen by Step-wise backwards process.
+
+```{r}
+
+model_zi2 = zeroinfl(TARGET ~ VolatileAcidity + FreeSulfurDioxide + TotalSulfurDioxide + Sulphates+Alcohol+AcidIndex+STARS , data = train, dist = 'negbin')
+summary(model_zi2)
+```
+
+## Select Models
+
+Since we have different metrics for different methods, we will need a unified method of measure the performance, so we will go ahead and use the validation set we set aside and then calculate the RMSE and compare the results.
+```{r}
+p1 = predict(model_p1,test, type="response")
+p2 = predict(model_p2,test, type="response")
+p3 = predict(model_nb1,test, type="response")
+p4 = predict(model_nb2,test, type="response")
+p5 = predict(model_lm1,test, type="response")
+p6 = predict(model_lm2,test, type="response")
+p7 = predict(model_zi1,test, type="response")
+p8 = predict(model_zi2,test, type="response")
+
+
+
+library(Metrics)
+col_names =  c('Model', 'RMSE')
+results  = data.frame(ncol = 2, nrow = 0)
+colnames(results) = col_names
+results = rbind(results, c('Model1', rmse(p1, test$TARGET)))
+results = rbind(results, c('Model2', rmse(p2, test$TARGET)))
+results = rbind(results, c('Model3', rmse(p3, test$TARGET)))
+results = rbind(results, c('Model4', rmse(p4, test$TARGET)))
+results = rbind(results, c('Model5', rmse(p5, test$TARGET)))
+results = rbind(results, c('Model6', rmse(p6, test$TARGET)))
+results = rbind(results, c('Model7', rmse(p7, test$TARGET)))
+results = rbind(results, c('Model8', rmse(p8, test$TARGET)))
+
+results = results[-1,]
+results
+
+```
+It appears that the Zero inflation model combined with step-wise backwards selection is the most accurate model, so we will use that model to make our predictions.
+
+
+## Predicting on testdata
+
+We will go ahead and use model8 to make our forecasts. But before we do that we will need to do the same data imputation and transformation as with the train set. So we will need to do the following:
+1. transform STARS predictor
+2. Remove index
+3. Use absolute values
+4. Impute the missing values
+5. Predict the target and round the result so that we have round number of cases.
+
+Once we are done we will preview first 30 records of our prediction data set.
+
+```{r}
+#Remove Index
+testdata$IN =NULL
+
+#Adjust Stars
+testdata$STARS[is.na(testdata$STARS)] <- 0
+
+#Get rid of negatives
+testdata[] <- lapply(testdata, abs)
+
+#Impute
+testdataimp = missForest(testdata)
+testdataMod <- testdataimp$ximp
+
+#Predict
+pred = predict(model_zi2, newdata = testdataMod)
+
+#Assign back
+testdataMod$TARGET = round(pred)
+
+#Preview 
+show = head(testdataMod, 30)
+kable(show)
+
+#Save to csv
+#write.csv(testdataMod, '621hw5_predictions.csv')
+```
+
+## Appendix A 
+
+R markdown file with code along with full predictions csv file available at:  https://github.com/jelikish/Cuny1/tree/master/Spring2018/621/hw5
