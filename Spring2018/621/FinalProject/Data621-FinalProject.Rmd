@@ -1,0 +1,183 @@
+---
+title: "Data621-Final Project"
+author: "Joseph Elikishvili"
+date: "May 23, 2018"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+library(psych)
+library(knitr)
+```
+
+## Data Exploration and transformation.
+
+We will get started by loading the 2 csv files, we will need to combine them into a single data frame. We will go ahead and that below and preview the data.
+
+```{r}
+#Read the data from 2 files
+data1 <- read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Spring2018/621/FinalProject/citi_total1.csv", header = TRUE)
+data2 <- read.csv("C:/Users/joseph/Documents/GitHub/Cuny/Spring2018/621/FinalProject/citi_total2.csv", header = TRUE)
+
+#Combine data into 1 file
+data = rbind(data1, data2)
+
+#Preview
+head(data)
+```
+
+It appears we have X predictor that is just an index, we will remove it and proceed. Lets examine the dimension of the data-set 
+
+```{r}
+#Remove index
+data$X = NULL
+
+dim(data)
+```
+It appears we have over 432000 records and 13 variables. This gives us enough data to build our models.
+
+Next we will take a look at HCPC variable which represents an hourly precipitation, it contains a lot of N/A variables which represent the fact that there was none, so we will go ahead and replace all NA records with 0 for that variable.
+
+```{r}
+#Replacing 
+data$HPCP[is.na(data$HPCP)] <- 0
+```
+
+Next we will examine the data set and review if we have any additional missing data.
+
+```{r}
+#Check for missing values
+colSums(is.na(data))
+```
+
+It appears that the last row has some misting data, so we will go ahead and remove the last row.
+
+```{r}
+#remove last line
+tail(data)
+data <- data[-nrow(data),]
+```
+
+Lets visually examine Missing values by using Amelia library and then confirm by manual output
+
+```{r}
+library(Amelia)
+missmap(data, main = "Missing values")
+```
+
+```{r}
+#Check for missing values
+colSums(is.na(data))
+```
+
+It appears we do not have any more missing values and we are ready to proceed. 
+
+Next we will check datatype of each of the predictor variables 
+
+```{r}
+#Check data types
+str(data)
+```
+
+We have all predictors as int or num which is good and we can go ahead and leave them as such, The only predictor that is using factor is HOUR, so we will go ahead and convert Hour from strings to numbers 1-24, 1 representing 00:00 and 24 representing 23:00
+
+```{r}
+data$HOUR = as.numeric(factor(data$HOUR))
+```
+
+## Data Visualisation
+
+Next we will review our predictors and analyze various metrics such as SD and range to better understand  the data
+
+```{r}
+table.desc <- describe(data)
+table.prep <- as.matrix(table.desc)
+table.round <- round((table.prep), 2)
+kable(table.round)
+```
+
+We will go ahead and review box-plots and histograms to better understand the shape of the data we are dealing with
+
+```{r}
+data1 = data
+data1$X = NULL
+data1$DATE2 = NULL
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data1)){
+  boxplot(data1[,i], xlab = names(data1[i]),
+          main = names(data1[i]), col="grey", ylab="")
+}
+```
+
+
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(data1)){
+hist(data1[,i], xlab = names(data1[i]),
+  main = names(data1[i]), col="grey", ylab="")
+}
+
+```
+
+Most of the data is close to being normally distributed but there are some skews we will attempt to improve that in the next section
+
+## Data transformation
+
+We will perform Box-cox transformation on the following predictor variables: AWND, TMAX, TMIN, WDF2, WDF5, WSF2, WSF5, TMID. we will create a separate data frame to hold the transformed values and will have 2 data sets to chose from during modeling, one with raw data and one that has some of the predictors transformed. 
+
+```{r}
+data_trans = data
+data_trans$DATE2 = NULL
+data_trans$start.station.id = NULL
+data_trans$n = NULL
+data_trans$HPCP = NULL
+data_trans$HOUR = NULL
+
+#Boxcox
+library(caret)
+dataB = preProcess(data_trans, c("BoxCox", "center", "scale"))
+datanorm = data.frame(dataB = predict(dataB, data_trans))
+#Fix the colnames
+colnames(datanorm) = colnames(data_trans)
+```
+
+Lets preview transformed predictors
+
+```{r}
+
+par(mfrow = c(3,5), cex = .5)
+for(i in colnames(datanorm)){
+hist(datanorm[,i], xlab = names(datanorm[i]),
+  main = names(datanorm[i]), col="grey", ylab="")
+}
+
+datanorm$DATE2 = data$DATE2
+datanorm$start.station.id = data$start.station.id
+datanorm$n = data$n
+datanorm$HPCP = data$HPCP
+datanorm$HOUR = data$HOUR
+```
+
+Looks like most of the predictors have benefited from transformation, some more then the other but overal there seems to be a positive change to the shape of the distribution.
+
+## Correlation plot
+
+Next we will create and review the correlation plot to see if we have heavy correlation in any of the predictor variables.
+
+```{r}
+library(corrplot)
+#install.packages("corrplot")
+correlations <- cor(data1)
+corrplot(correlations, order = "hclust", tl.cex = 0.55)
+```
+
+
+It appears there is a heavy correlation between TMIN,TMAX and TMD variables, also there is some correlation between WSF5 and WSF2 variables.  We will make a not of these existing relationships and will make adjustments when creating our models if needed.
+
+#### NOTE: you have 2 dataframes: data which contains non-transformed data and you have datanorm, which contains same data but with box-cox applied to some of the predictors.
+
