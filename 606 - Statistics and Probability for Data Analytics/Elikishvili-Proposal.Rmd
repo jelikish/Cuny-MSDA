@@ -1,0 +1,48 @@
+---
+title: "Elikishvili-Proposal"
+author: "Joseph Elikishvili"
+date: "October 23, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(DT)
+```
+
+### Load the data
+
+```{r}
+reviews = read.csv("C:/Users/joseph/Downloads/ign.csv", stringsAsFactors = FALSE) 
+str(reviews)
+#head(reviews)
+datatable(reviews)
+```
+
+### Research question 
+
+In the past decade I have noticed that there are less and less strategy games releases. In this study I would like to review the data and try to answer the question if the strategy game releases have decreased in the past years.
+
+
+### Cases 
+
+The cases are reviews on http://ign.com and there are 18625 of total cases in the dataset.
+
+
+### Data collection 
+
+The following dataset from Kaggle will be used for this study: https://www.kaggle.com/egrinstein/20-years-of-games
+
+### Response 
+
+Response variable is categorical and is provided by the genre of the game
+
+### Explanatory 
+
+The ratio of strategy game reviews in the specific year will be my explanatory variable.
+
+### Summary
+
+I have several approaches how to answer the question: 
+1. Divide data into 2 decades: 1996-2006 and 2006-2016 compare the percentage of Strategy game reviews in first decade vs. second
+2. Since the above approach does not use much statistics, I was thinking about the following. Take a sample of 30 reviews from 1st decade 100 times and then do the same for the second decade. Test the hypothesis that the mean strategy games will be the same from both sample distributions.

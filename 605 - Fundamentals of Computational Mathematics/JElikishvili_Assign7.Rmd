@@ -1,0 +1,92 @@
+---
+title: "IS605-Assign7"
+author: "Joseph Elikishvili"
+date: "March 19, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment 7
+##Part 1.
+
+```{r}
+# Function Calculating E(x)
+expected <- function(l)  {
+  total =0
+  
+  for (i in 1:length(l)) 
+  {
+    prob = 1 / length(l)
+    total = total + l[i]*prob
+  }
+  
+  return(total)
+}
+
+#Function calculating Standard Deviation
+stdv <- function(l)  {
+  var =0
+  
+  for (i in 1:length(l)) 
+  {
+    expect = expected(l)
+    prob = 1/ (length(l)-1)
+    var = var + ((l[i]-expect)^2)*prob
+  }
+  
+  return(sqrt(var))
+}
+
+
+
+#Testing the functions
+list = c(1,2,3,1)
+expected(list)
+mean(list)
+stdv(list)
+sd(list)
+```
+
+## Part 2.
+
+```{r}
+
+xsum<-0
+x2sump<-0
+sd <- 0
+expect <- 0
+count <- 0
+rolling <- function(num) 
+{
+  if (count>0){
+  count <<- count+1
+  xsum <<- xsum + num
+  x2sump <<- x2sump + (num^2)
+  expect <<- xsum/count
+  sd <<- sqrt((x2sump - count*expect^2)/(count-1))
+  return (c(expect,sd))
+  }
+  
+  #Exception for count = 0 since it causes algebra related issues.
+   if (count==0){
+    count <<- count+1
+    xsum <<- xsum + num
+    x2sump <<- x2sump + (num^2)
+    return (c(num,0))
+  }
+}
+
+#testing using builtin functions
+list = c(2,3,4,5)
+mean(list)
+sd(list)
+
+rolling(2)
+rolling(3)
+rolling(4)
+rolling(5)
+
+```

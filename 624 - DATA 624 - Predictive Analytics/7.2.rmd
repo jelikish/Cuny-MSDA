@@ -1,0 +1,265 @@
+---
+title: '7.2'
+author: "Joseph Elikishvili"
+date: "December 11, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+### 7.2
+
+#### Chapter 7 talks about non linear regressions. It goes over several models. Specifically MARS, SVM and K-NN. Exercise 7.2 goes over evaluating different models and comparing the results to better understand how to chose the appropriate model for a specific situation.
+
+Friedman (1991) introduced several benchmark data sets create by simulation.
+One of these simulations used the following nonlinear equation to
+create data:
+y = 10 sin(??x1x2) + 20(x3 ??? 0.5)2 + 10x4 + 5x5 + N(0, ??2)
+where the x values are random variables uniformly distributed between [0, 1]
+(there are also 5 other non-informative variables also created in the simulation).
+The package mlbench contains a function called mlbench.friedman1 that
+
+We will preload the necessary libraries and generate the training and test data, then try the data on KNN, MARS and SVM and finally we will compare the results.
+
+```{r}
+library(mlbench)
+set.seed(200)
+trainingData <- mlbench.friedman1(200, sd = 1)
+## We convert the 'x' data from a matrix to a data frame
+## One reason is that this will give the columns names.
+trainingData$x <- data.frame(trainingData$x)
+## Look at the data using
+#featurePlot(trainingData$x, trainingData$y)
+## or other methods.
+```
+
+```{r}
+ ## This creates a list with a vector 'y' and a matrix
+ ## of predictors 'x'. Also simulate a large test set to
+ ## estimate the true error rate with good precision:
+ testData <- mlbench.friedman1(5000, sd = 1)
+ testData$x <- data.frame(testData$x)
+```
+
+### KNN 
+
+First we will use KNN model and view the results.  
+
+```{r}
+library(caret)
+knnModel <- train(x = trainingData$x, y = trainingData$y, method = "knn", preProc = c("center", "scale"), tuneLength = 10)
+knnModel
+```
+
+Next we will use the trained model to make a prediction and review the RMSE
+
+```{r}
+knnPred <- predict(knnModel, newdata = testData$x)
+## The function 'postResample' can be used to get the test set
+## perforamnce values
+postResample(pred = knnPred, obs = testData$y)
+```
+
+We get RMSE = 3.17
+
+###MARS
+
+Next we will take a look at MARS model
+
+```{r}
+set.seed(101)  
+mars_grid = expand.grid(degree =1:2, nprune=seq(2,14,by=2))
+marsTune = train(x= trainingData$x, y=trainingData$y, method='earth', tuneGrid=mars_grid, trControl = trainControl(method = "cv"))
+marsTune
+```
+
+We will review the Variable importance
+```{r}
+#Variable Importance
+varImp(marsTune)
+```
+
+It appears MARS is only using x1-x5 to make a prediction.
+
+Next we will make the prediction using MARS and review the results.
+
+```{r}
+mars_pred = predict (marsTune, testData$x)
+postResample(pred = mars_pred, obs = testData$y)
+```
+
+We get RMSE = 1.28 which is a definite improvement from KNN
+
+
+### SVM
+
+Next we will use SVM model
+
+```{r}
+set.seed(102)
+svmTune = train(x= trainingData$x, y=trainingData$y, method='svmRadial', tuneLength = 14, trControl = trainControl(method = "cv"))
+svmTune$finalModel
+```
+
+Lets review the variable importance
+
+```{r}
+varImp(svmTune)
+```
+Looks like x1-x5 are still the most important variables although in this case only x7 is not used, Also it appears x7 is the most important variable for SVM, although x7 was not even used by MARS
+
+Lets review the results
+```{r}
+svmPred <- predict(svmTune, newdata = testData$x)
+postResample(pred = svmPred, obs = testData$y)
+```
+
+We get RMSE = 4.86
+
+### Conclusion
+
+We conclude that MARS is the most accurate of the 3 models in this particular case. It resulted in  the lowest RMSE of 1.28
+
+### 7.5.  Exercise 6.3 describes data for a chemical manufacturing process. Use the same data imputation, data splitting, and pre-processing steps as before and train several nonlinear regression models.
+
+We will import imputation and data splitting code from 6.3 below.
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+
+data(ChemicalManufacturingProcess)
+df = ChemicalManufacturingProcess
+#summary(df)
+
+library(missForest)
+df_imp1 = missForest(df)
+df_imp = df_imp1$ximp
+
+data = df_imp[,2:58]
+target = df_imp[,1]
+
+training = createDataPartition( target, p=0.75 )
+predictor_training = data[training$Resample1,]
+target_training = target[training$Resample]
+
+predictor_testing = data[-training$Resample1,]
+target_testing = target[-training$Resample1]
+```
+
+
+
+###KNN
+
+We will start with KNN model and will measure the performance of the model.
+
+```{r}
+knnModel_75 <- train(x = predictor_training, y = target_training, method = "knn", preProc = c("center", "scale"), tuneLength = 10)
+knnModel_75
+```
+
+Looks like we get the best RMSE metrics with n=5.  We will use the model to make the prediction.
+
+```{r}
+knnPred_75 <- predict(knnModel_75, newdata = predictor_testing)
+postResample(pred = knnPred_75, obs = target_testing)
+```
+
+KNN based predictions have RMSE of 1.26.
+
+#### Next we will use MARS model and measure the predictive performance.
+
+```{r}
+mars_grid = expand.grid(degree =1:2, nprune=seq(2,14,by=2))
+marsTune_75 = train(x = predictor_training, y = target_training, method='earth', tuneGrid=mars_grid, trControl = trainControl(method = "cv"))
+marsTune_75
+```
+
+We will review Variable importance
+
+
+
+
+Next we will make the prediction using MARS and review the results.
+
+```{r}
+marspred_75 = predict (marsTune_75, predictor_testing)
+postResample(pred = marspred_75, obs = target_testing)
+```
+
+We have RMSE of 1.17 which is a slight improvement over KNN model.
+
+
+#### Next we will use SVM model to make the prediction on the data set.
+
+```{r}
+svmTune_75 = train(x = predictor_training, y = target_training, method='svmRadial', tuneLength = 14, trControl = trainControl(method = "cv"))
+svmTune_75
+```
+
+
+
+
+Lets review the results
+```{r}
+svmPred_75 <- predict(svmTune_75, newdata = predictor_testing)
+postResample(pred = svmPred_75, obs = target_testing)
+```
+
+We get an RMSE of 2.09 with SVM which is slightly worse then the previous models.
+
+### A. Which nonlinear regression model gives the optimal resampling and test set performance?
+
+Out of 3 non linear models we used, MARS has the best accuracy with RMSE of 1.17 
+
+### B. Which predictors are most important in the optimal nonlinear regression model? Do either the biological or process variables dominate the list? How do the top ten important predictors compare to the top ten predictors from the optimal linear model?
+
+Lets review predictor importance of MARS and KNN models as they have the best RSME scores.
+
+#### KNN top predictors
+
+
+```{r}
+#plot(varImp(knnModel))
+```
+
+#### MARS top predictors
+
+
+```{r}
+#plot(varImp(marsTune))
+```
+
+Interestingly enough we see pretty much same predictors selected by both models. Knn shows same top picks as PLS and MARS model although only selects top 2 predictos, still has the same top 2 as PLS. ManufacturingProcess32 and manifacturingprocess09 remain top predictors and interestingly enough MARS was able to predict using only those 2 predictors and had comparable results to PLS, which means we could very well need only 2 predictors to capture most of the predictions.
+
+#### C. Explore the relationships between the top predictors and the response for the predictors that are unique to the optimal nonlinear regression model. Do these plots reveal intuition about the biological or process predictors and their relationship with yield?
+
+We have the same predictors as PLS, so we will use those
+
+```{r}
+plot(data$ManufacturingProcess32, target)
+abline(lm(target~data$ManufacturingProcess32),col="red",lwd=1.5)
+```
+
+```{r}
+plot(data$ManufacturingProcess09, target)
+abline(lm(target~data$ManufacturingProcess09),col="red",lwd=1.5)
+```
+
+
+Both predictors have positive corelation. Lets check the exact corelation
+
+```{r}
+cor(data$ManufacturingProcess32, target)
+```
+
+```{r}
+cor(data$ManufacturingProcess09, target)
+```
+
+
+
+###Conclusion
+
+It appears that we have come to the same conclusion using non-linear models, which is a good indicator that PLS was not the worst choice for this task, We also identified that most of the predictions are coming from 2 top predictors and therefore any potential optimization work should be directed at those 2 predictors.

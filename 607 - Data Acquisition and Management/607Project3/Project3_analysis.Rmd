@@ -1,0 +1,339 @@
+---
+<<<<<<< Updated upstream
+title: "Project 3: Data Science Skills"
+author: "Aaron Grzasko, Ahsanul Choudhury, Andrew Carson, Bruce Hao, Daniel Thonn, Dhananjay Kumar, Joseph Elikishvili"
+date: "October 23, 2016"
+output: 
+  html_document:
+    highlight: tango
+    theme: united
+    pdf_document: default
+=======
+title: "Project 3"
+author: "Andrew Carson"
+date: "October 16, 2016"
+output: html_document
+>>>>>>> Stashed changes
+---
+
+### Load Data
+
+<<<<<<< Updated upstream
+Now we load the data from the MySQL database.  First, a connection is created, then a query is formed.  The query is fetched and the results are returned.
+
+```{r eval=TRUE, message=FALSE}
+library(dbConnect)
+
+
+#set variables for connecting to MySQL
+=======
+```{r eval=TRUE}
+library(dbConnect)
+
+
+
+>>>>>>> Stashed changes
+username = 'data607'
+
+password = 'project3'
+
+dbname = 'ds_skills'
+
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com'
+
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host)
+
+
+<<<<<<< Updated upstream
+#write query string to pull data from tables in MySQL
+=======
+
+>>>>>>> Stashed changes
+qryString = 'SELECT jobs.post_id, role_desc, city, state, keyword_desc 
+
+FROM jobs
+
+INNER JOIN locations
+
+ON jobs.loc_id = locations.loc_id
+
+INNER JOIN roles
+
+ON jobs.role_id = roles.role_id
+
+INNER JOIN post_keys
+
+ON jobs.post_id = post_keys.post_id 
+
+INNER JOIN  keywords
+
+ON post_keys.key_id = keywords.key_id
+
+;'
+
+
+<<<<<<< Updated upstream
+#pull query
+selectQry = dbSendQuery(myDb, qryString)
+results = fetch(selectQry, n = -1)
+
+#display first 10 rows
+head(results, n=10)
+```
+* * *
+
+### Analysis
+Our task is to answer the question: "Which are the most valued data science skills?"  The easiest way to answer this is to look at the most frequent keywords in our dataset.
+
+```{r, message=FALSE}
+=======
+
+selectQry = dbSendQuery(myDb, qryString)
+
+results = fetch(selectQry, n = -1)
+
+##results
+```
+* * *
+
+### Begin Analysis
+
+```{r}
+>>>>>>> Stashed changes
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(knitr)
+<<<<<<< Updated upstream
+library(DT)
+library(stringr)
+=======
+>>>>>>> Stashed changes
+
+#trim white space
+results$keyword_desc<-str_trim(results$keyword_desc)
+
+# counts of keywords
+keyword_counts<-data.frame(table(results$keyword_desc))
+names(keyword_counts)<-c("Keyword","Freq")
+<<<<<<< HEAD
+head(arrange(keyword_counts,desc(Freq)), n=10)
+<<<<<<< Updated upstream
+=======
+keyword_counts$Keyword<-as.character(keyword_counts$Keyword)
+head(arrange(keyword_counts,desc(Freq)), n=11)
+>>>>>>> 2c1a1277cf1b70add4891337b348c6db1efa15b2
+```
+
+We see that communication tops the list, followed by Excel, JAVA, SQL, machine learning, and Python.  R comes in at number 11.
+
+We add a plot to visualize the result.
+```{r, message=FALSE}
+#plot of keyword counts
+qplot(data = keyword_counts, x = reorder(Keyword, -Freq), y=Freq, xlab="Keyword", ylab="Frequency", main = "Keywords by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+Overall, we see programming languages (JAVA, Python), statistical languages (R, SAS), big data languages(Pig, Hive), big data technologies (mapreduce, Hadoop), standard data skills (Excel, SQL), and visualization (Tableau, d3).  We also see a lot of "soft skills" or broad topic knowledge like communication, deep learning, math, "big data", "data mining", etc.
+
+Adding nuance, what sorts of roles are we looking at that matched our search query when finding data?
+
+```{r, message=FALSE}
+=======
+
+
+
+>>>>>>> Stashed changes
+#count of role description
+distinct_roles<-distinct(select(results, post_id,role_desc))
+distinct_roles<-data.frame(table(distinct_roles$role_desc))
+names(distinct_roles)<-c("Role","Freq")
+head(arrange(distinct_roles,desc(Freq)), n=10)
+
+<<<<<<< Updated upstream
+#plot of role description
+qplot(data = subset(distinct_roles, Freq>3), x = reorder(Role, -Freq), y=Freq, xlab="Role", ylab="Frequency", main = "Role by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+The most frequent is "data-scientist", which makes sense since this is what we were looking for.  We can also see "machine-learning", "software-engineer", and "statistician" in the list.  Most role descriptions are unique, but could be further grouped if desired.
+
+How do roles and skills align?  Take a look at the below table, and sort on the keyword to find which job titles use this skill the most:
+
+```{r, message=FALSE}
+=======
+>>>>>>> Stashed changes
+#role vs. keyword counts
+role_vs_Keyword<-results %>%
+  select(role_desc,keyword_desc) %>%
+  group_by(role_desc, keyword_desc) %>%
+  count(role_desc, keyword_desc) %>%
+  spread(role_desc,n)
+  
+<<<<<<< Updated upstream
+
+#keyword vs. role
+keyword_vs_role<-results %>%
+  select(role_desc,keyword_desc) %>%
+  group_by(role_desc, keyword_desc) %>%
+  count(role_desc, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+#which roles require which skills?
+datatable(keyword_vs_role)
+```
+
+Since we are most interested in "data scientists", let's look at job titles that match "data-scientist":
+
+```{r, message=FALSE, warning=FALSE}
+# show top keywords for data-scientist
+top_data_scientist<-
+  arrange(role_vs_Keyword, desc(`data-scientist`)) %>%
+  select(keyword_desc, `data-scientist`) 
+
+#plot data-scientist
+qplot(data = top_data_scientist, x = reorder(keyword_desc, -`data-scientist`), y=`data-scientist`, xlab="Keyword", ylab="Frequency", main = "Data Scientist: Keyword by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+Machine learning, Excel, Python, statistics, Hadoop, R, and communication are the top skills.
+
+What about anything that matches the pattern "data-scien"?  This will include all levels of data scientists and other job titles that have this pattern in it.
+
+```{r, message=FALSE}
+# show top keywords for anything like data scientist
+top_data_scientist_all<-
+  results %>%
+  subset(str_detect(role_desc,"data-scien")) %>%
+  select(keyword_desc) %>%
+  group_by(keyword_desc) %>%
+  count(keyword_desc) %>%
+  arrange(desc(n))
+
+#plot data-scientist: all
+qplot(data = top_data_scientist_all, x = reorder(keyword_desc, -n), y=n, xlab="Keyword", ylab="Frequency", main = "All 'Data Scientists': Keyword by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1))   
+```
+
+We have machine learning, Python, Statistics, Math, SQL, data mining, communication, and R. 
+
+Where are these jobs being offered?  We collected the city and state information with these job postings:
+```{r}
+=======
+kable(role_vs_Keyword)
+
+## show top keywords for each role
+# Data Analyst
+arrange(role_vs_Keyword, desc(`Data Analyst`)) %>%
+  select(keyword_desc, `Data Analyst`) %>%
+  slice(1:10)
+
+# Data Engineer
+arrange(role_vs_Keyword, desc(`Data Engineer`)) %>%
+  select(keyword_desc, `Data Engineer`) %>%
+  slice(1:10)
+
+# Data_Scientist
+arrange(role_vs_Keyword, desc(`Data_Scientist`)) %>%
+  select(keyword_desc, `Data_Scientist`) %>%
+  slice(1:10)
+
+# Jr. Data Scientist
+arrange(role_vs_Keyword, desc(`Jr. Data Scientist`)) %>%
+  select(keyword_desc, `Jr. Data Scientist`) %>%
+  slice(1:10)
+
+# Sr. Data Scientist
+arrange(role_vs_Keyword, desc(`Sr. Data Scientist`)) %>%
+  select(keyword_desc, `Sr. Data Scientist`) %>%
+  slice(1:10)
+
+
+
+>>>>>>> Stashed changes
+#count of city
+distinct_city<-distinct(select(results, post_id, city))
+distinct_city<-data.frame(table(distinct_city$city))
+names(distinct_city)<-c("city","Freq")
+head(arrange(distinct_city,desc(Freq)), n=10)
+<<<<<<< Updated upstream
+```
+
+Seattle is the top city at 69, followed by Chicago at 10, and Plano at 9.
+
+What is your city's favorite data science skill?
+
+```{r}
+=======
+
+>>>>>>> Stashed changes
+#city vs. keyword counts
+city_vs_Keyword<-results %>%
+  select(city,keyword_desc) %>%
+  group_by(city, keyword_desc) %>%
+  count(city, keyword_desc) %>%
+  spread(city,n)
+  
+<<<<<<< Updated upstream
+#keyword vs. city counts
+keyword_vs_city<-results %>%
+  select(city,keyword_desc) %>%
+  group_by(city, keyword_desc) %>%
+  count(city, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+datatable(keyword_vs_city)
+```
+
+Finally, we have the state.  Washington, California, and Texas have the most job postings.  Which skills does your state prefer?
+```{r}
+=======
+kable(city_vs_Keyword)
+
+
+
+>>>>>>> Stashed changes
+#count of state
+distinct_state<-distinct(select(results, post_id, state))
+distinct_state<-data.frame(table(distinct_state$state))
+names(distinct_state)<-c("state","Freq")
+head(arrange(distinct_state,desc(Freq)), n=10)
+
+
+#state vs. keyword counts
+state_vs_Keyword<-results %>%
+  select(state,keyword_desc) %>%
+  group_by(state, keyword_desc) %>%
+  count(state, keyword_desc) %>%
+  spread(state,n)
+  
+<<<<<<< Updated upstream
+#keyword vs. state counts
+keyword_vs_state<-results %>%
+  select(state,keyword_desc) %>%
+  group_by(state, keyword_desc) %>%
+  count(state, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+datatable(keyword_vs_state)
+```
+
+### Conclusion
+<<<<<<< HEAD
+Our team found that many skills we expected to be popular were: Python, Excel, big data technologies, SQL.  The most surprising result is that R is not as popular as we thought it would be or should be.  This may be due to the difficulty of extracting "R" from the text of a job description, as we would expect it to be on par with Python in popularity.  This would be something that we would investigate for further analysis.
+=======
+kable(state_vs_Keyword)
+
+
+```
+>>>>>>> Stashed changes
+
+=======
+Our team found that many skills we expected to be popular were: Python, Excel, big data technologies, machine learning, SQL.  Perhaps most surprising is that "communication" is the top skill. Clearly, "soft skills" are still very important even for more technically oriented data scientists.
+>>>>>>> 2c1a1277cf1b70add4891337b348c6db1efa15b2
+
+Another surprising result was that R is not as popular as we thought it would be.  This may be due to the difficulty of extracting "R" from the text of a job description, as we would expect it to be on par with Python in popularity.  We did some work on getting better extraction of "R", and while its numbers did improve, it still lags behind Python by quite a bit.

@@ -1,0 +1,104 @@
+---
+title: "R Final Project"
+author: "Joseph Elikishvili"
+date: "August 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+
+```
+
+#### 1. Creating a subset of the hlfights and storing it into a new dataframe. Creating a new column that will store date in YYYYMMDD format by combining data from YEAR, MONTH and DayofMonth columns. 
+Loading necessary libraries
+
+```{r}
+require(hflights)
+require(ggplot2)
+require(plyr)
+```
+
+Creating a subset "subflights"
+
+```{r}
+subflights = subset(hflights,select=c("Year","Month","DayofMonth","UniqueCarrier", "DepDelay", "Cancelled","CancellationCode"))
+```
+
+Creating a new column that will store Date
+```{r}
+subflights$Date <- paste(subflights$Year, subflights$Month, subflights$DayofMonth, sep ="")
+head(subflights)
+```
+Removing unneeded Columns
+```{r}
+subflights$Year = NULL
+subflights$DayofMonth = NULL
+subflights$Month = NULL
+head(subflights)
+```
+
+####2. Attempting to answer the following question: Which is the most reliable Airline? By looking at relative cancelation rates due to Airline Fault, Comparing Departure Delays and Arrival Delays by Airline.
+Looking at Cancelation data by Carriers in order to see which carrier has the highest flight cancealation rate due to Carrier Fault.
+```{r}
+cancelations=subflights[subflights$CancellationCode =='A',]
+cancel = count(cancelations$UniqueCarrier)
+flights = count(subflights$UniqueCarrier)
+```
+Cleaning Dataset and binding the data
+```{r}
+flights = flights[-c(2),]
+rownames(flights) <- seq(length=nrow(flights))
+data=cbind(flights,cancel$freq)
+colnames(data) = c("carriers","flights","cancelations")
+```
+
+Calculating Cancelation rate per Airline and displaying final dataset
+```{r}
+data$cancelrate=round(data$cancelations/data$flights, digits=4)
+data
+```
+
+Plotting Cancellation Rate by Airlines 
+```{r}
+ggplot(data, aes(x=carriers, y=cancelrate)) + geom_bar(stat="identity") + xlab('Airlines') +ylab('Cancelation Rate due to Airline')
+```
+
+Comparing Mean Departure Delay by Airlines
+```{r}
+DepD = aggregate(DepDelay~UniqueCarrier, data=hflights,mean)
+ggplot(DepD, aes(x=UniqueCarrier, y=DepDelay)) + geom_bar(stat="identity")
+```
+
+Comparing Mean Arrival Delay by Airlines
+```{r}
+ArrD = aggregate(ArrDelay~UniqueCarrier, data=hflights,mean)
+ggplot(ArrD, aes(x=UniqueCarrier, y=ArrDelay)) + geom_bar(stat="identity")
+```
+
+####3. Looking at "Origin" Airports to see which one is a faster option for traveling by comparing an average Departure Delay and Arrival Delay times. 
+Comparing Mean Departure Delay Times in 2 Airports
+```{r}
+OriginDepDelay = aggregate(DepDelay~Origin, data=hflights,mean)
+OriginDepDelay
+```
+
+Comparng Mean Arrival Delay Times in 2 Airports
+```{r}
+OriginArrDelay = aggregate(ArrDelay~Origin, data=hflights,mean)
+OriginArrDelay
+```
+
+Comparing Mean Taxin Times in 2 Airports
+```{r}
+aggregate(TaxiIn~Origin, data=hflights,mean)
+```
+
+Comparing Mean Taxiout Times in 2 Airports
+```{r}
+aggregate(TaxiOut~Origin, data=hflights,mean)
+```
+
+#### After looking at Airlines one can notice that they all have a pretty respectable statistics as far as cancelation rates and pretty reasonable average Departure and Arrival Delays. Having said that, for the purposes of this study, I would recommend avoiding EV, B6, WN, UA and would recommend using US and FL.
+
+#### After evaluating Departure and Arrival Delays in HOU and IAH airports.  It appears that IAH has lower both mean Arrival and mean Departure Delay times, making it a faster option for the end user. I took a quick look at avergae Taxin and Taxiout times to see if they affect delays, but it appears that they do not seem to be affecting the delay times. IAH has lower delay times but higher TAXI in and TAXOUT times possibly due to the higher number of flights, but these numbers are still not affecting the relative performance compared to HOU which has higher mean Delay times but lower mean TAXI times.  

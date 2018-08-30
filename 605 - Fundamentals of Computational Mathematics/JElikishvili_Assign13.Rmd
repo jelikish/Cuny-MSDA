@@ -1,0 +1,99 @@
+---
+title: "IS605 Assignment 13"
+author: "Joseph Elikishvili"
+date: "May 8, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1.
+
+```{r}
+fprime = function(x) 
+{
+  h = 0.00001
+  return(( ((x+h)^3 + 2*(x+h)^2) - (x^3+2*(x^2)) )/h)
+}
+
+#Testing 3
+fprime(3)
+
+#F' = 3x^2+4x
+#F'(3) = 3*3^2+4*3
+3*3^2+4*3
+
+
+#Testing 9
+fprime(9)
+
+3*9^2+4*9
+```
+
+
+### 2.
+
+```{r}
+remansum = function(lower,upper) 
+{
+  x = seq(lower,upper, 1e-6)
+  fx =  3*x^2+4*x
+  fx_delta = fx*1e-6
+  return(sum(fx_delta))
+}
+  
+remansum(1,3)
+
+#Testing
+f = function(x) 3*x^2+4*x
+integrate(f, 1,3)
+```
+
+###3a.
+
+$$\int_{}^{} sin(x)cos(x)dx $$
+u = sin(x) du = cos(x)
+dv = cos(x) v = sin(x)
+
+$$\int_{}^{} sin(x)cos(x)dx  = sin^2(x) - \int_{}^{} sin(x)cos(x)dx $$
+
+$$2\int_{}^{} sin(x)cos(x)dx  = sin^2(x) $$
+
+$$\int_{}^{} sin(x)cos(x)dx = 1/2*sin^2(x) +c $$
+
+
+###3b.
+
+$$\int_{}^{} x^2e^xdx $$
+u = x^2
+du = 2x
+dv = e^x
+v = e^x
+
+$$\int_{}^{} x^2e^xdx  = x^2e^x - 2\int_{}^{} xe^xdx $$
+
+u = x
+du = 1
+dv = e^x
+v = e^x
+
+$$\int_{}^{} x^2e^xdx  = x^2e^x - 2[xe^x-\int_{}^{} e^x]$$
+
+$$\int_{}^{} x^2e^xdx = x^2e^x -2xe^x + 2e^x +c $$
+
+###3c.
+
+fg = f'g + g'f
+
+f = (x cos(x))
+f' = 1cos(x) +x(-sin(x)) = cos(x) -xsin(x)
+
+###4c.
+f = e^(x^4)
+
+f' = e^(x^4)*4x^3 = 4(x^3)e^(x^4)
+
+
+

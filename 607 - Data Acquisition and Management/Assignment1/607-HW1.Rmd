@@ -1,0 +1,110 @@
+---
+title: "MSDA Data 607 Assignment #1"
+author: "Joseph Elikishvili"
+date: "September 11, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RMySQL)
+library(RSQLite)
+library(ggplot2)
+```
+
+## Introduction
+
+The purpose of this asignment is to create a database containing rankings of 6 recent movies by 5 different users, connect to the database from R and load the database into a dataframe. This particular implementation is using Mysql as a database server and is using RMySQL package to istablish the connection to database and retrieve the data. 
+
+
+```{r cars}
+```
+
+##### below is the copy of sql script which is used to create and populate the database
+
+```{r, echo=TRUE}
+
+# DROP DATABASE IF EXISTS moviedb;
+# CREATE database moviedb;
+# use moviedb;
+# 
+# CREATE TABLE users (
+# userID int not null auto_increment,
+# fname varchar(20),
+# lname varchar(20),
+# primary key (userID)
+# );
+# 
+# INSERT INTO users (fname, lname) VALUES
+# ('Natalia','Lesechko'),
+# ('Victoria','Elikishvili'),
+# ('Sergey','Vayner'),
+# ('Bing','Bong'),
+# ('Dmitry','Yuster');
+# 
+# CREATE TABLE movies (
+# movieID int not null auto_increment,
+# title varchar (30),
+# genre varchar(20),
+# imdbrating float,
+# primary key (movieID)
+# );
+# 
+# INSERT INTO movies (title, genre, imdbrating) VALUES
+# ('Jason Bourne','Action',6.9),
+# ('War Dogs','Comedy',7.3),
+# ('Suicide Squad','Action',6.7),
+# ('Inside Out','Animation',8.3),
+# ('Zootopia','Animation',8.1),
+# ('Now you see me 2','Action',6.6);
+# 
+# CREATE TABLE reviews(
+# userID int,
+# movieID int,
+# userrating int
+# );
+# 
+# INSERT INTO reviews (userID, movieID, userrating) VALUES
+# (1,1,4),(1,2,3),(1,3,2),(1,4,4),(1,5,4),(1,6,4),
+# (2,1,2),(2,2,2),(2,3,1),(2,4,5),(2,5,5),(2,6,3),
+# (3,1,5),(3,2,5),(3,3,3),(3,4,4),(3,5,3),(3,6,3),
+# (4,1,4),(4,2,3),(4,3,4),(4,4,5),(4,5,5),(4,6,3),
+# (5,1,5),(5,2,5),(5,3,3),(5,4,4),(5,5,4),(5,6,3);
+# 
+# SELECT users.fname, users.lname, movies.title, movies.genre, movies.imdbrating, reviews.userrating from reviews
+# JOIN users on users.userID = reviews.userID
+# JOIN movies on reviews.movieID = movies.movieID
+# ORDER BY title;
+```
+
+
+##### Next we initiate a conection with the local database, create the sql string and run the query and store the result in a dataframe and finally display the results. 
+
+
+```{r}
+rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.7/my.ini"
+con <- dbConnect(RMySQL::MySQL(), default.file=rmysql.settingsfile, dbname = "moviedb", username=NULL, password=NULL)
+sql <- "SELECT users.fname, users.lname, movies.title, movies.genre, movies.imdbrating, reviews.userrating from reviews JOIN users on users.userID = reviews.userID JOIN movies on reviews.movieID = movies.movieID ORDER BY title;"
+res <- dbGetQuery(con, sql)
+res
+```
+
+#####  Next we aggrigate the rankings to calculate the mean ranking for each of the movies and compare it with IMDB ranking and check the correlation between the two. 
+```{r}
+a=aggregate(res[, 6], list(res$title, res$imdbrating), mean)
+ colnames(a) <- c("Move_Title", "User_Ranking","IMDB_Ranking")
+a
+```
+
+##### Below we are plotting the user ranking and IMDB ranking by movie
+```{r}
+ggplot(a, aes(x=Move_Title, y=User_Ranking)) + geom_bar(stat="identity")
+ggplot(a, aes(x=Move_Title, y=IMDB_Ranking)) + geom_bar(stat="identity")
+```
+
+##### Finally we check for correlation between the two rankings
+```{r}
+cor(a$User_Ranking,a$IMDB_Ranking)
+```
+
+##### The second part of the project was not designed to provide any kind of conclusion, I was simply interested to see how it relates to IMDB rankings, nevertheless correlation of .81 is interesting considering we only had limited data.

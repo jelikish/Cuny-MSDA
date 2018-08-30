@@ -1,0 +1,128 @@
+---
+title: "606-HW4"
+author: "Joseph Elikishvili"
+date: "October 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(IS606)
+```
+
+## 4.4
+
+a) point estimate = 171.1, midean = 171.1
+b) 9.4, IQR = 177.8-163.8=14
+c) 180 falls within 1SD so its not considered unusual, 155 is not within 1SD, but is within 2SD, 
+so it is less usual and is closer to 2SD, but still is within 2SD, so I would not call it very 
+unusual.
+d) Since it will be a new sample, the mean and SD will be different, although pretty close most 
+likely.
+e) 9.4/sqrt(507) = 0.417
+
+```{r}
+```
+
+## 4.14
+
+a) true
+b) False
+c) true
+d) true
+e) true
+f) false
+g) true
+
+```{r}
+```
+
+## 4.24
+a) While distribuition looks close to normal, it doesn't exactly fit the perfect normal 
+distribution, so I would like to see a sample size of 100 to account for that.
+b) H0 m = 32
+   Ha m < 32
+   
+   
+p=0.034<.10, so we reject the null Hypothesys. 
+
+```{r}
+se=4.31/sqrt(36)
+x=(32-30.69)/se
+p=1-pnorm(x)
+p
+```
+
+p value is less then 0.1 so we do not have enough evidence to reject H0
+
+c) p Value is less then the significance value of .10
+d) 
+```{r}
+upper = 30.69 + 1.28*se
+lower = 30.69 - 1.28*se
+c(lower,upper)
+```
+e) We did not have enough evidence to reject H0 in part b, this did not mean that we accepted H0, we simply did not reject it. But now we see that 32 is not part of the range. So parts b and e do suggest different results, but then again did not accept H0 as the fact in the part b, we simply did not have enough evidence to rejecty it.
+
+## 4.26
+
+a) H0 m = 100
+   Ha m!= 100
+   
+```{r}
+se=6.5/sqrt(36)
+z=(100-118.2)/se
+p=1-pnorm(z)
+```
+
+p value is greater then the significance level so we reject Ho.
+
+b) 
+```{r}
+upper = 118.2 + 1.28*se
+lower = 118.2 - 1.28*se
+c(lower,upper)
+```
+
+c) Yes results agree as 100 is not part of the range.
+
+## 4.34
+
+Sampling distribution is the distribution of samples taken out of the population. So lets say we take 50 samples and then create a distribution of the means of those samples.  The higher is the numbner of samples the closer the distribution will reseble the normal distribution. 
+
+
+## 4.40
+
+a) 6.7%
+```{r}
+1500/1000
+1-pnorm(1.5)
+
+```
+
+b) Lets take a 90% confidence interval and see the distribution of the means
+```{r}
+se = 1000/sqrt(15)
+upper = 9000 + 1.28*se
+lower = 9000 - 1.28*se
+c(lower,upper)
+```
+
+c) We would need to move 5+ standard deviations in order to reach 10500, so the probability wouldbe extremly low.
+
+```{r}
+z = (10500-9000)/se
+1-pnorm(z)
+```
+
+d)
+
+```{r}
+normalPlot(mean = 9000, sd = 1000)
+```
+
+e) No, we only have a sample of 15 we would need a sample of at least 100 to work with a a skewed distribution.
+
+## 4.48
+
+As we get more data, variablity of the data will decrease and we should have readfings very close to the actual population. So p value generally should deacrese.  

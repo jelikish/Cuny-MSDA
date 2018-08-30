@@ -1,0 +1,103 @@
+---
+title: "IS605-Assignment11"
+author: "Joseph Elikishvili"
+date: "April 24, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 1
+
+
+```{r cars}
+Age  = c(18, 23, 25, 35, 65, 54, 34, 56, 72, 19, 23, 42, 18, 39, 37)
+MaxHR = c(202, 186, 187, 180, 156, 169, 174, 172, 153, 199, 193, 174, 198, 183, 178)
+
+result = lm(MaxHR~Age)
+summary(result)
+```
+
+Based on above output, we get the following equasion: MaxHR = 210.04846 - 0.79773*Age
+
+The Adjusted R-2 is 0.9021 which is pretty hight and indicates that the effect is significant.  The low p-value is another strong indication of the above.
+
+
+Next we will plot the fitted relationship between Max HR and Age
+
+```{r}
+reg1 = lm(MaxHR ~ Age)
+
+plot(Age,MaxHR)
+abline(reg1)
+```
+
+
+##Part 2
+
+####Using the Auto data set from Assignment 5 (also attached here) perform a Linear Re-gression analysis using mpg as the dependent variable and the other 4 (displacement, horse-power, weight, acceleration) as independent variables. What is the final linear regression fit equation? Which of the 4 independent variables have a significant impact on mpg? What are their corresponding significance levels? What are the standard errors on each of the coeficients?
+
+```{r}
+cars = read.table("c:/data/auto-mpg.data")
+colnames(cars) = c('displacement', 'hp', 'weight', 'acceleration', 'mpg')
+tail(cars)
+
+cars_reg=lm(mpg ~ displacement+hp+weight+acceleration, data = cars)
+summary(cars_reg)
+```
+
+Based on the above, the final equasion is: 45.2511397 - 0.0060009*Dispalacement -0.0436077*hp -0.0052805*weight -0.0231480*acceleration
+
+Based on the p-vales we can state that hp and weight are have significant impact on mpg, and displacement and acceleration do not have significant impact since their p-vales are > 0.05.  We can further test this by recaculating adjusted R2 after we eliminate them one by one
+
+```{r}
+#Removed displacement
+cars_reg_test=lm(mpg ~ hp+weight+acceleration, data = cars)
+summary(cars_reg_test)
+        
+#Removed acceleration
+cars_reg_test=lm(mpg ~ hp+weight+displacement, data = cars)
+summary(cars_reg_test)
+
+#Now lets remove weight since it has the lowest p-value
+cars_reg_test=lm(mpg ~ displacement+hp+displacement, data = cars)
+summary(cars_reg_test)
+```
+
+We can clearly see that removeing acceleration or displacement has pretty insignificant affect on R2, so they dio not seem to be hurtiung the model but definately do not help it.  But when we removed weight the R2 dropped.
+
+
+####Please perform this experiment in two ways. First take any random 40 data points from the entire auto data sample and perform the linear regression fit and measure the 95% confidence intervals. Then, take the entire data set (all 392 points) and perform linear regression and measure the 95% confidence intervals. Please report the resulting fit equation, their significance values and confidence intervals for each of the two runs.
+
+```{r}
+library(dplyr)
+#Get a sample of 40
+cars_sample = sample_n(cars, 40)
+
+#run lm on a sample.
+sample_reg=lm(mpg ~ displacement+hp+weight+acceleration, data = cars_sample)
+summary(sample_reg)
+
+output = function(x)
+{
+  sprintf(paste0(x$coefficients[1], '   +(', x$coefficients[2], '*', 'Displacement', ')   +(', x$coefficients[3], '*','HP', ')   +(', x$coefficients[4], '*','Weight', ')   (', x$coefficients[5],'*','Acceleration)'))
+}
+
+output(sample_reg)
+```
+
+The above is the final equasion of the sample of 40.
+
+
+```{r}
+
+
+#95% confidence interval of sample data
+confint(sample_reg, level=0.95)
+
+#95% confidence interval of original data
+confint(cars_reg, level=0.95)
+
+```

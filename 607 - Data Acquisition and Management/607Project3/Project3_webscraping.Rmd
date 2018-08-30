@@ -1,0 +1,73 @@
+---
+title: "Monster WebScraping"
+author: "Joseph Elikishvili"
+date: "October 19, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Web scraping Summary
+
+We attempted to scrape job postings from indeed.com and monster.com. Our effort with regards to indeed.com was not successful as the custom API package we found provided limited functionality and challenges such as: inability to scrape a large percentage of job postings, having issues with having job urls being redirected to a employers site, being unable to parse some of the employer sites as job listings where not part of html page and finally dealing with a large number of duplicate postings. We were able to deal with most of the issues such as url redirects and mitigated some of the ssl related issues, but decided that the very low number of unique job postings made this approach unworkable.
+
+Next we attempted to scrape monster.com which does not redirect job postings and has a useful data embedded into the urls. We had an issue scraping the monster.com directly and tried a number of packages to do that, but where unsuccessful, we finally decided to extract the job posting urls by using http://www.bulkdachecker.com/url-extractor/ tool and extracted 25 links per page. This pre-processing step is semi-automated but works well for the intended purpose.  We processed a total of 1000 postings out of which we were able to extract about 450 searchable job post.
+
+Once we extract the links we store them in links.csv file which is read by R.
+
+
+## The following is the Summary of the code used for web scraping
+
+Below we are loading the necessary libraries, reading the file with URLs, parsing the URLs and storing the job description into the column of the data frame
+
+```{r}
+
+#library(boilerpipeR)
+#library(RCurl)
+#library(stringr)
+#library(stringi)
+
+#read the file with urls
+#list = read.csv("c:/data/links.csv", stringsAsFactors = FALSE)
+
+
+#parsing each url and saving job text into description column
+#for (i in 1:nrow(list))
+#{
+#  content <- getURL(list$Link[i])
+#  extract <- DefaultExtractor(content)
+#  list$description[i] = extract
+#}
+
+#getting rid of entries with an empty description
+#list = subset(list, list$description != "")
+
+```
+
+
+## Extraction of additional data from URL
+
+Monster urls have additional information embedded into the URL and because of that we are able to extract: Job title, City and State.  Example URL:
+http://jobview.monster.com/consulting-data-scientist-job-charlotte-nc-us-173969790.aspx?mescoid=1500152001001&jobPosition=1
+
+We extract the data we need with the following code
+
+```{r}
+
+#extracting job title, city, state from url and adding them as columns
+
+#for (i in 1:nrow(list))
+#{
+#  r_extract=str_match(list$Link[i], "http://jobview.monster.com/(.*)-job-(.*)-(\\w\\w)-us.*")
+#  list$Job_Title[i] = r_extract[2]
+#  list$City[i] = r_extract[3]
+#  list$State[i] = r_extract[4]
+#}
+```
+
+## Conclusion
+After working with different sites and packages, we realized that there is no unique way of scraping the data from the web and each solution needs to be tailored for the specific purpose and the specific website. This task might be challenging in certain situations, but additional tools can be usefull to extract the data and this task does not have to be limited to using R. We briefly worked with httr package which is great for handling url redirects and used boilerpipeR package which is an easy to use and powerful parser of html pages.
+
+

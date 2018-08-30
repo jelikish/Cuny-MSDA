@@ -1,0 +1,76 @@
+---
+title: '8.1'
+author: "Joseph Elikishvili"
+date: "December 12, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 8.1
+
+We will load data from 7.2 as per instructions.
+
+```{r}
+library(mlbench)
+set.seed(202)
+simulated <- mlbench.friedman1(200, sd = 1)
+simulated <- cbind(simulated$x, simulated$y)
+simulated <- as.data.frame(simulated)
+colnames(simulated)[ncol(simulated)] <- "y"
+```
+
+### Fit a random forest model to all of the predictors, then estimate the variable importance scores:
+
+```{r}
+library(randomForest)
+library(caret)
+model1 <- randomForest(y ~ ., data = simulated,
+importance = TRUE,
+ntree = 1000)
+rfImp1 <- varImp(model1, scale = FALSE)
+rfImp1
+```
+
+We can see that V1-V5 got much higher weights then V6-V10. By rough estimate we see a cumulative absolute weight of 25 for V1-V5 and an absolute cumulative weight of about 0.6 for V6-V10, this shows a significant relative difference
+Did the random forest model significantly use the uninformative predictors (V6 - V10)?
+
+
+
+### B. Now add an additional predictor that is highly correlated with one of the informative predictors. For example:
+
+```{r}
+simulated$duplicate1 <- simulated$V1 + rnorm(200) * .1
+cor(simulated$duplicate1, simulated$V1)
+```
+
+Fit another random forest model to these data. Did the importance score for V1 change? What happens when you add another predictor that is also highly correlated with V1?
+
+Lets go ahead and add the predictor to the data and re run the model
+```{r}
+simulated$V11 = simulated$duplicate1
+model2 <- randomForest(y ~ ., data = simulated,
+importance = TRUE,
+ntree = 1000)
+rfImp2 <- varImp(model1, scale = FALSE)
+rfImp2
+```
+
+We can see that V1 score has decreased, as the highly corelated predictor has been added. So we can conclude that the importance of the variable will decrase if there are highly corelated predictors present.
+
+### Use the cforest function in the party package to fit a random forest model using conditional inference trees. The party package function varimp can calculate predictor importance. The conditional argument of that function toggles between the traditional importance measure and the modified version described in Strobl et al. (2007). Do these importances show the same pattern as the traditional random forest model?
+
+```{r}
+library(party)
+rf1 = cforest(y ~., data =simulated[, 1:11], controls = cforest_control(ntree=1000))
+rf2 = cforest(y ~., data =simulated, controls = cforest_control(ntree=1000))
+imp1= varImp(rf1) 
+imp2= varImp(rf2)
+imp1
+```
+
+```{r}
+imp2
+```

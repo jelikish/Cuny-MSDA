@@ -1,0 +1,211 @@
+---
+title: "Math Final Project"
+author: "Joseph Elikishvili"
+date: "August 12, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(hflights)
+```
+
+##### Arrival Delay will be represented by Random Variable X 
+##### Departure Delay will be represented Random Variable Y
+
+#### 1. First we look at the skew of both ArrDelay and DepDelay 
+
+The Following Histogram is showing the distribution of Arrival Delays having positive skew
+```{r}
+library(ggplot2)
+ggplot(hflights, aes(ArrDelay)) + geom_histogram() + xlim(-50, 250)
+```
+
+
+The Following Histogram is showing the distribution of Departure Delays also having positive skew
+```{r}
+ggplot(hflights, aes(DepDelay)) + geom_histogram() + xlim(-50, 250)
+```
+
+#### 2. Subsetting hflights and removing NA values from dataframe
+```{r}
+h=subset(hflights,select=c(ArrDelay,DepDelay))
+h1=na.omit(h)
+
+x= h1$ArrDelay
+y= h1$DepDelay
+
+length(x)
+length(y)
+
+quantile(x)
+quantile(y)
+```
+Based on data above, We will be using 11 for 3rd Quartile of x and 0 for 2nd quartile of y
+
+Next we are Calculating Values for x/y table
+
+1.  X<=11,y<=0
+```{r}
+p1=nrow(subset(h1, ArrDelay <= 11 & DepDelay <= 0))
+p1
+```
+
+2. X<=11, y>0
+```{r}
+p2=nrow(subset(h1, ArrDelay <= 11 & DepDelay > 0))
+p2
+```
+
+3. X>11, Y<=0
+```{r}
+p3=nrow(subset(h1, ArrDelay > 11 & DepDelay <= 0))
+p3
+```
+
+4. X>11, Y>0
+```{r}
+p4=nrow(subset(h1, ArrDelay > 11 & DepDelay > 0))
+p4
+```
+
+Table of counts
+```{r}
+table = matrix(c(p1,p3,p1+p3,p2,p4,p2+p4,p1+p2,p3+p4,p1+p2+p3+p4), nrow=3, ncol=3)
+colnames(table) = c("<=Q2",">Q2","Total")
+rownames(table) = c("<=Q3",">Q3","Total")
+table
+```
+
+Calculating a. P(X>x | Y>y)   
+```{r}
+a=(48548/223874)/.5
+a
+```
+
+Calculating b.P(X>x, Y>y)  
+```{r}
+b=(54707/223874)*(109574/223874)
+b
+```
+
+Calculating P (X <x | Y<y)
+```{r}
+c =(61026/223874)/.5
+c
+```
+
+P(A|B)=P(A)P(B)? 
+```{r}
+A = 54707/223874
+B = 109574/223874
+```
+
+Calculate P(A|B)
+```{r}
+(48548/223874)/.5
+```
+
+Calculate P(a)*P(B)
+```{r}
+A*B
+```
+
+Based on above calculations we can conclude that P(A|B) != P(A)P(B)
+
+```{r}
+t1=c(x,y)
+t2=table(t1)
+chisq.test(t2)
+```
+
+Based on above Chi-squared test we see that p<0.05, therefore we reject the Hypotheses that Arrival Delay and Departure Delay are independent.
+
+#### 2. Descriptive and Inferential Statistics.
+
+Below is a Scatter Plot of Arrival Delay and Departure Delay 
+```{r}
+library(plotly)
+plot_ly(data = h1, x = ArrDelay, y =DepDelay, mode = "markers")
+```
+Scatter Plot sugest a strong correation between the delays times.
+
+Next we calculate the 95% Confedence interval for the difference of the means
+```{r}
+t.test(x,y)
+```
+
+Derive a correlation matrix for two of the quantitative variables
+```{r}
+h=subset(hflights,select=c(ArrDelay,DepDelay))
+h1=na.omit(h)
+cor(h1$ArrDelay, h1$DepDelay)
+corm = matrix(c(1,0.929,0.929,1),nrow=2,ncol=2)
+corm
+```
+
+Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval
+```{r}
+cor.test(h1$ArrDelay, h1$DepDelay, conf.level = 0.99)
+```
+Based on above we reject the null hypothesis that the correleation between the variables is 0.
+
+
+#### 3. Linear Algebra and Corelation
+```{r}
+precm = solve(corm)
+precm
+precm%*%corm
+corm%*%precm
+```
+We are multipling precision matrix by correlation matrix and correlation matrix by precision matrix. As we can see we are getting an Identity Matrix as a result of both multipications. This is to be expected, although normally we get different awnser depending on the order of how we multiply 2 matricies, in this case the matricies are inverses of each outher, so we end up with a 2x2 Identity matrix as a result.
+
+#### 4. Calculus-Based Probability & Statistics
+```{r}
+summary(h1$ArrDelay)
+summary(h1$DepDelay)
+```
+
+We can see that minimum values are -70 and -33, so we will shift 71 to make sure minimal value is above 0.
+```{r}
+x=h1$ArrDelay+71
+summary(x)
+```
+
+Histogram of Shifted Data
+```{r}
+plot_ly(x=x, type="histogram")
+```
+
+Histogram of Original Data
+```{r}
+plot_ly(x=hflights$ArrDelay, type="histogram")
+```
+
+Next Loading Masspackage and fitting to exponential function
+```{r}
+require(MASS)
+l=fitdistr(x, "exponential")
+l
+l$estimate
+samples=rexp(1000, l$estimate )
+```
+
+Below are 5th and 95th percentiles using the cumulative distribution function (CDF)
+```{r}
+quantile(samples, probs=0.95)
+quantile(samples, probs=0.05)
+```
+
+Calculating 95% confidence interval from the empirical data, assuming normality. ( Using z=1.96 (.975) since we are dealing with 2 tails)
+```{r}
+mean(x)-1.96*sd(x)
+mean(x)+1.96*sd(x)
+```
+Based on above calculations based on 95% Confidece Interval = 17.90564 < M < 138.283
+
+```{r}
+quantile(h1$ArrDelay, probs=0.95)
+quantile(h1$ArrDelay, probs=0.05)
+```
+Above are 5th percentile and 95th percentile of the data

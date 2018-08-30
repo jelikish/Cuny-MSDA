@@ -1,0 +1,209 @@
+---
+title: "JElikishvili_assign2"
+author: "Joseph Elikishvili"
+date: "February 12, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1.1
+
+### Show that ATA != AAT in general. (Proof and demonstration.)
+
+
+Since we know that AB != BA from the general Matrix properties this suggests that AtA != AAt unless specifically proven.
+
+
+#### Lets demontrsate it
+```{r}
+A = matrix(c(1,1,3,2),byrow=T,nrow=2,ncol=2)
+AtA = A%*%t(A)
+AAt = t(A)%*%A
+
+AtA
+AAt
+```
+
+#### As we can see from above, AtA != AAt
+
+## 1.2
+#### For a special type of square matrix A, we get AT A = AAT. Under what conditions could this be true? (Hint: The Identity matrix I is an example of such a matrix).
+
+```{r}
+A = matrix(c(5,1,1,5),byrow=T,nrow=2,ncol=2)
+AtA = A%*%t(A)
+AAt = t(A)%*%A
+
+AtA
+AAt
+```
+
+#### The above property holds holds for symetric matricies.
+
+## 2.1
+
+#### Function will print U matrix followed by L
+```{r}
+
+LU <- function(A)  {
+  L1 = diag(nrow(A))
+  L2 = diag(nrow(A))
+  L3 = diag(nrow(A))
+  L4 = diag(nrow(A))
+
+  #print(A)
+  if (nrow(A) == 2) 
+  {
+    for (r in 2:nrow(A))
+    {
+      pivot = (A[r,1]/A[1,1])
+      A[r,] = A[r,] - pivot*A[1,]
+      L1[r,1] = pivot
+      L=L1
+    }
+  }
+  
+  #print (L)
+  
+  if (nrow(A) == 3) {
+    
+    pivot = (A[2,1]/A[1,1])
+    A[2,] = A[2,] - pivot*A[1,]
+    L1[2,1] = -pivot
+    
+    pivot = (A[3,1]/A[1,1])
+    A[3,] = A[3,] - pivot*A[1,]
+    L1[3,1] = -pivot
+    L1=solve(L1)
+    
+    pivot = (A[3,2]/A[2,2])
+    A[3,] = A[3,] - pivot*A[2,]
+    L2[3,2] = -pivot
+    L2=solve(L2)
+    L=L1%*%L2
+    
+  }
+  
+  if (nrow(A) == 4) 
+  {
+    pivot = (A[2,1]/A[1,1])
+    A[2,] = A[2,] - pivot*A[1,]
+    L1[2,1] = -pivot
+    
+    pivot = (A[3,1]/A[1,1])
+    A[3,] = A[3,] - pivot*A[1,]
+    L1[3,1] = -pivot
+    
+    pivot = (A[4,1]/A[1,1])
+    A[4,] = A[4,] - pivot*A[1,]
+    L1[4,1] = -pivot
+    L1=solve(L1)
+    
+    pivot = (A[3,2]/A[2,2])
+    A[3,] = A[3,] - pivot*A[2,]
+    L2[3,2] = -pivot
+    
+    pivot = (A[4,2]/A[2,2])
+    A[4,] = A[4,] - pivot*A[2,]
+    L2[4,2] = -pivot
+    
+    L2=solve(L2)
+    
+    pivot = (A[4,3]/A[3,3])
+    A[4,] = A[4,] - pivot*A[3,]
+    L3[4,3] = -pivot
+    L3=solve(L3)
+    
+    L=L1%*%L2%*%L3
+    
+  }
+
+   if (nrow(A) == 5) 
+  {
+    pivot = (A[2,1]/A[1,1])
+    A[2,] = A[2,] - pivot*A[1,]
+    L1[2,1] = -pivot
+    
+    pivot = (A[3,1]/A[1,1])
+    A[3,] = A[3,] - pivot*A[1,]
+    L1[3,1] = -pivot
+    
+    pivot = (A[4,1]/A[1,1])
+    A[4,] = A[4,] - pivot*A[1,]
+    L1[4,1] = -pivot
+    
+    pivot = (A[5,1]/A[1,1])
+    A[5,] = A[5,] - pivot*A[1,]
+    L1[5,1] = -pivot
+    L1=solve(L1)
+    
+    
+    pivot = (A[3,2]/A[2,2])
+    A[3,] = A[3,] - pivot*A[2,]
+    L2[3,2] = -pivot
+    
+    pivot = (A[4,2]/A[2,2])
+    A[4,] = A[4,] - pivot*A[2,]
+    L2[4,2] = -pivot
+    
+    pivot = (A[5,2]/A[2,2])
+    A[5,] = A[5,] - pivot*A[2,]
+    L2[5,2] = -pivot
+    L2=solve(L2)
+    
+    pivot = (A[4,3]/A[3,3])
+    A[4,] = A[4,] - pivot*A[3,]
+    L3[4,3] = -pivot
+    
+    pivot = (A[5,3]/A[3,3])
+    A[5,] = A[5,] - pivot*A[3,]
+    L3[5,3] = -pivot
+    L3=solve(L3)
+    
+    pivot = (A[5,4]/A[4,4])
+    A[5,] = A[5,] - pivot*A[4,]
+    L4[5,4] = -pivot
+    L4=solve(L4)
+    
+    L=L1%*%L2%*%L3%*%L4
+  }
+
+  return (list('upper'=L, 'lower'=A))
+}
+```
+  
+Testing 2x2
+```{r}
+A = matrix(c(1,1,3,2),byrow=T,nrow=2,ncol=2)
+l = LU(A)
+l
+l$upper%*%l$lower
+```
+
+Testing 3x3
+```{r}
+A = matrix(c(1,1,3,2,4,7,6,3,6),byrow=T,nrow=3,ncol=3)
+l = LU(A)
+l
+l$upper%*%l$lower
+```
+
+Testing 4x4
+```{r}
+A = matrix(c(1,1,3,2,4,7,6,3,6,5,1,3,7,2,7,16),byrow=T,nrow=4,ncol=4)
+l = LU(A)
+l
+l$upper%*%l$lower
+```
+
+Testing 5x5
+```{r}
+A = matrix(c(1,1,3,2,4,7,6,3,6,5,1,3,7,2,7,16,1,2,3,4,5,6,7,8,9),byrow=T,nrow=5,ncol=5)
+
+l = LU(A)
+l
+l$upper%*%l$lower
+```

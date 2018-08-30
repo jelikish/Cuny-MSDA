@@ -1,0 +1,68 @@
+---
+title: "IS605-Assign8"
+author: "Joseph Elikishvili"
+date: "March 25, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+```
+
+## Problem Set 1
+
+Your colleague either commutes by train or by the bus. 20 days of the month,
+she takes the train and the remaining 10 days she takes the bus. If she takes the
+train, she reaches work on time with a probability of 0.9. If she takes the bus, she
+frequently gets stuck in traffic and reaches work on time with a probability of 0.5.
+Given that she was on time today, what is the probability that she took the bus to
+work today?
+
+```{r}
+#P(Bus|ontime) = P(ontime|Bus) * P(bus) / P(ontime|Bus) * P(bus) + P(ontime|!=bus) * P(!=bus)
+#P(Bus|ontime) = P(ontime|Bus) * P(bus) / P(ontime|Bus) * P(bus) + P(ontime|Train) * P(Train)
+
+#P(Bus) = 0.333
+#P(Train) = 0.666
+#P(ontime|Bus) = 0.5
+#P(ontime|Train) = 0.9
+
+
+P_busontime = 0.5*0.333/(0.5*0.333+0.9*0.666)
+P_busontime
+```
+
+## Problem Set 2
+In the Grade Network that we looked at in the notes, what happens to the probability of
+Difficulty of Course when you present the evidence that the received recommendation letter
+was good? In addition, now present the evidence that both SAT scores were good and
+the letter of recommendation was good, What is the probability of the Difficulty of Course
+now?
+
+```{r}
+library(gRain)
+library(gRbase)
+d <- cptable(~ difficulty, values=c(0.3, 0.7), levels=c("N", "Y"))
+i <- cptable(~ intelligence, values=c(0.8, 0.2), levels=c("L", "H"))
+s <- cptable(~ sat|intelligence, values=c(0.9, 0.1, 0.2, 0.8), levels=c("L", "H"))
+g <- cptable(~ grade|difficulty:intelligence, values=c(0.6,0.4,0.8,0.2,0.1,0.99,0.1,0.9), levels=c("L", "H"))
+l <- cptable(~ letter|grade, values=c(0.9, 0.1, 0.05, 0.95), levels=c("L", "H"))
+
+plist <- compileCPT(list(d, i, s, g, l))
+
+plist
+plist$sat
+
+prob1 <- grain(plist)
+
+querygrain(prob1, nodes=c("difficulty","intelligence","sat","grade","letter"), type="marginal")
+
+#Adding good recomendation letter
+q1 <- setEvidence(prob1, evidence = list(letter = "H"))
+querygrain(q1, nodes=c("difficulty"), type="marginal")
+
+#Adding good recomendation letter and good SAT score.
+q2 <- setEvidence(prob1, evidence = list(letter = "H", sat = "H"))
+querygrain(q2, nodes=c("difficulty"), type="marginal")
+
+```

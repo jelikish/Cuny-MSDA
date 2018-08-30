@@ -1,0 +1,11 @@
+#Joseph Elikishvili
+#602 - HW8
+
+import scipy.ndimage as ndimage
+import scipy.misc as misc
+
+raw_image = misc.imread('c:\data\images\ojects.png')
+img = ndimage.gaussian_filter(raw_image, 5)
+thres = img >img.mean()
+
+misc.imsave('c:\data\images\t_ojects.png')

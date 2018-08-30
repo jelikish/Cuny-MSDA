@@ -1,0 +1,52 @@
+---
+title: "606-HW8"
+author: "Joseph Elikishvili"
+date: "December 7, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### 8.2 Baby weights, Part II. Exercise 8.1 introduces a data set on birth weight of babies. Another variable we consider is parity, which is 0 if the child is the first born, and 1 otherwise. The summary table below shows the results of a linear regression model for predicting the average birth weight of babies, measured in ounces, from parity.
+
+a) weight = 120.07 -1.93(parity)
+b) for every 1 unit of changein parity, weight will decrease 1.93 units
+c) p>0.05 means there is not statistically significant relationship.
+
+#### 8.4 Absenteeism. Researchers interested in the relationship between absenteeism from school and certain demographic characteristics of children collected data from 146 randomly sampled students in rural New SouthWales, Australia, in a particular school year. Below are three observations from this data set.
+
+a) numdays = 18.93 - 9.11(eth) + 3.10(sex) + 2.15(lrn)
+b) If we have aboriginal, numdays will increase 9.11, Males, numdays will increase 3.10, slow learner will add 2.15 to numofdays
+c) 18.93-0+3.10+2.15 = 24.18    residual:  2-24.18= -22.18
+d) r-squared = 1- 240.57/264.17 = 0.0893
+adjusted-r = 1- (240.57/264.17*((146-1)/(146-3-1)))=0.07
+
+#### 8.8 Absenteeism, Part II. Exercise 8.4 considers a model that predicts the number of days absent using three predictors: ethnic background (eth), gender (sex), and learner status (lrn). The table below shows the adjusted R-squared for the model as well as adjusted R-squared values for all models we evaluate in the first step of the backwards elimination process.
+
+"No learner status"" can be removed as the model without has a higher adjusted-r
+
+#### 8.16 Challenger disaster, Part I. On January 28, 1986, a routine launch was anticipated for the Challenger space shuttle. Seventy-three seconds into the flight, disaster happened: the shuttle broke apart, killing all seven crew members on board. An investigation into the cause of the disaster focused on a critical seal called an O-ring, and it is believed that damage to these O-rings during a shuttle launch may be related to the ambient temperature during the launch. The table below summarizes observational data on O-rings for 23 shuttle missions, where the mission order is based on the temperature at the time of the launch. Temp gives the temperature in Fahrenheit, Damaged represents the number of damaged O-rings, and Undamaged represents the number of O-rings that were not damaged.
+
+a) Theer seems to be more Damaged O-rings assisiated with lower temperature readings.
+
+b) Each increase of 1 degree in temperature, decreases overall value by 0.2162
+
+c) log(p/1-p) = 11.6630 - 0.2162(temperature)
+
+d) yes, after plugging in some temperatures, we can clearly see that probability goes up as temprature drops.
+
+
+#### 8.18 Challenger disaster, Part II. Exercise 8.16 introduced us to O-rings that were identified as a plausible explanation for the breakup of the Challenger space shuttle 73 seconds into takeo??? in 1986. The investigation found that the ambient temperature at the time of the shuttle launch was closely related to the damage of O-rings, which are a critical component of the shuttle. See this earlier exercise if you would like to browse the original data.
+
+a) p51:  11.6630 - 0.2162*51 = 0.6368
+p51 = exp(0.6368)/(1+exp(0.6368)) = 0.654
+
+p53:  11.6630 - 0.2162*53 = 0.6368 = 0.2044
+p53 = exp(0.2044)/(1+exp(0.2044)) = 0.5509228
+
+p55: 11.6630 - 0.2162*55 = -0.228
+p55 = exp(-0.228)/(1+exp(-0.228))= 0.4432456
+
+c) Assumtions are that the model is well represented by the 3 data points. After looking at a plot, approximately I can see that data does follow the model but very approximately and leaves a lot of points outside.

@@ -1,0 +1,57 @@
+---
+title: "Assignment 4"
+author: "Joseph Elikishvili"
+date: "August 6, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+For this project I am using The following dataset: "Hedonic Prices of Cencus Tracts in Boston"
+Dataset Documentation is available at: http://vincentarelbundock.github.io/Rdatasets/doc/Ecdat/Hedonic.html
+```{r}
+require(Rcurl)
+library(ggplot2)
+url<-"http://vincentarelbundock.github.io/Rdatasets/csv/MASS/Boston.csv"
+rawdata <- read.table(url, header=TRUE, sep=",")
+knitr::kable(head(rawdata))
+```
+
+Crime rate to proportion of owner units built prior to 1940 scatterplot.  The FOllowing scatterplot clearly shows that 
+Crime rates are higher in areas where units where built prior ro 1940. 
+```{r rawdata}
+ggplot(rawdata, aes(x=age, y=crim)) + geom_point() +xlab('Proportion of owner units built prior to 1940') +ylab('Crime Rate')
+```
+
+Crime rate to weighted distances to five employment centers in the Boston area. The following scatterplot shows that 
+the crime rate is usually lower further away from boston five employment centers and is the higherst crime rates are within 
+2.5 miles of the employment centers
+```{r}
+ggplot(rawdata, aes(x=dis, y=crim)) + geom_point() +xlab('weighted distances to five employment centers in the Boston area') + ylab('Crime Rate')
+```
+
+Following Histogram shows the distribution of median value of owner occupied homes 
+```{r}
+ggplot(rawdata, aes(x=medv)) + geom_histogram(binwidth=4) +xlab('median value of owner-occupied homes')
+```
+
+Following Histogram shows distribution areas where units where built prior to 1940
+```{r}
+ggplot(rawdata, aes(x=age)) + geom_histogram(binwidth=4) + xlab('Proportion of owner units built prior to 1940')
+```
+
+Following Boxplot shows relationship of Medium Value to Crime
+```{r}
+ggplot(rawdata, aes(x=crim, y=medv)) + geom_boxplot() + xlab('Crime') +ylab('Median value of owner-occupied homes')
+```
+
+The following scatter plot shows that areas around rad 24( Possibly Highway 24) have the highest crime rate
+```{r}
+ggplot(rawdata, aes(x=age, y=crim, shape=as.factor(chas), colour=as.factor(rad))) + geom_point() + xlab('Proportion of owner units built prior to 1940') + ylab('Crime')
+```
+
+Following scatter plots show relationship of Median value of owner occupied homes to number of rooms subdivided by rad(Highways)
+```{r}
+ggplot(rawdata, aes(x=rm, y=medv, colour=as.factor(chas))) + geom_point() + facet_grid( rad ~ .) + xlab('Number of Rooms') + ylab('Median value of owner-occupied homes')
+```

@@ -1,0 +1,36 @@
+---
+title: "IS605- Assignment 12"
+author: "Joseph Elikishvili"
+date: "May 1, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+cars = read.table("c:/data/auto-mpg.data")
+colnames(cars) = c('disp', 'hp', 'wt', 'acc', 'mpg')
+tail(cars)
+
+library(stats)
+library(boot)
+
+cv.err5 = vector()
+degree=1:8
+
+
+for (i in 1:8)
+{
+  glm.fit=glm(mpg~poly(disp+hp+wt+acc,i), data=cars)
+  glm = cv.glm(cars,glm.fit,K=5)$delta[1]
+  cv.err5 = c(cv.err5, glm)
+}
+
+plot(degree, cv.err5, type='b')
+
+
+```

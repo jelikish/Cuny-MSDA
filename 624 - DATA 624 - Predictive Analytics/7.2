@@ -1,0 +1,42 @@
+---
+title: '7.2'
+author: "Joseph Elikishvili"
+date: "December 11, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 7.2
+
+Chapter 7 talks about non leanier regressions. It goes over several models. specifically MARS, SVM and K-NN. Exersise 7.2 goes over evaluating different models and comparing the results to better understand how to chose the appropriate model for a specific situation.
+
+Friedman (1991) introduced several benchmark data sets create by simulation.
+One of these simulations used the following nonlinear equation to
+create data:
+y = 10 sin(??x1x2) + 20(x3 ??? 0.5)2 + 10x4 + 5x5 + N(0, ??2)
+where the x values are random variables uniformly distributed between [0, 1]
+(there are also 5 other non-informative variables also created in the simulation).
+The package mlbench contains a function called mlbench.friedman1 that
+
+We will preload the necessary libraries and generate the training and test data using mlbench as given
+
+```{r}
+library(mlbench)
+set.seed(200)
+trainingData <- mlbench.friedman1(200, sd = 1)
+## We convert the 'x' data from a matrix to a data frame
+## One reason is that this will give the columns names.
+trainingData$x <- data.frame(trainingData$x)
+## Look at the data using
+featurePlot(trainingData$x, trainingData$y)
+## or other methods.
+
+ ## This creates a list with a vector 'y' and a matrix
+ ## of predictors 'x'. Also simulate a large test set to
+ ## estimate the true error rate with good precision:
+ testData <- mlbench.friedman1(5000, sd = 1)
+ testData$x <- data.frame(testData$x)
+```

@@ -1,0 +1,138 @@
+---
+title: "Data624 - HW2"
+author: "Joseph Elikishvili"
+date: "December 9, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+## 6.3
+
+#### Chapter 6 talks about Linear regressions. Linear regresions are the most basic but very formidable models. They are easy to implement and can produce very good results. Chapter talks about the ordinary Linear regressions and then dives into PLS and extends conversation to Ridge Regression, Lasso and Elastic nets.
+
+A chemical manufacturing process for a pharmaceutical product was discussed in Sect. 1.4. In this problem, the objective is to understand the relationship between biological measurements of the raw materials (predictors), measurements of the manufacturing process (predictors), and the response of product yield. Biological predictors cannot be changed but can be used to assess the quality of the raw material before processing. On the other hand, manufacturing process predictors can be changed in the manufacturing process. Improving product yield by 1% will boost revenue by approximately one hundred thousand dollars per batch:
+
+### A. Start R and use these commands to load the data: The matrix processPredictors contains the 57 predictors (12 describing the input biological material and 45 describing the process predictors) for the 176 manufacturing runs. yield contains the percent yield for each run.
+
+We will get started by loading the necessary libraries, assigning the dataframe to a variable and exploring the dimentions of the dataset
+
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+
+data(ChemicalManufacturingProcess)
+df = ChemicalManufacturingProcess
+#summary(df)
+```
+
+### B. A small percentage of cells in the predictor set contain missing values. Use an imputation function to fill in these missing values (e.g., see Sect. 3.8).
+
+Next we will impute the missing values.  We will evaluate data to see how much data is missing in each of the variables.
+
+```{r}
+colSums(is.na(df))
+```
+
+We can see there is a number of missing values, but considering we are dealing with 2570 observations, it is a pretty low number, so imputation will have a very minimal effect.
+
+We will use the missForest to do that, We could use a mean or median or any of the other techniques, but the library does allow us to impute more easily using a range of techniques
+ 
+```{r}
+library(missForest)
+df_imp1 = missForest(df)
+df_imp = df_imp1$ximp
+```
+
+
+Next we will separate out target variable yield from rest of the predictors 
+
+```{r}
+data = df_imp[,2:58]
+target = df_imp[,1]
+```
+
+### C. Split the data into a training and a test set, pre-process the data, and tune a model of your choice from this chapter. What is the optimal value of the performance metric?
+
+Next we will split the data into training and test set.  We will use 75/25 ratio to split between the training and test data. 
+
+```{r}
+
+training = createDataPartition( target, p=0.75 )
+predictor_training = data[training$Resample1,]
+target_training = target[training$Resample]
+
+predictor_testing = data[-training$Resample1,]
+target_testing = target[-training$Resample1]
+```
+
+Next we will use PLS model to train the model, we will center and scale the data using the preProc feauture.
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 10)
+
+plsTune <- train(predictor_training, target_training,
+                   method = "pls",
+                   tuneLength = 20,
+                   trControl = ctrl,
+                   preProc = c("center", "scale"))
+```
+
+Next We will attempt to find out which of the variables are more important for our model. One way to do it is to evaluate the error metrics at each level, lets take a look
+
+```{r}
+plsTune
+```
+
+Looks like n=3 yields the best RMSE = 1.405534
+
+
+### D. Predict the response for the test set. What is the value of the performance metric and how does this compare with the resampled performance metric on the training set?
+
+Next we will use the model to make the predictions and will review the results.
+
+```{r}
+pred_test = predict(plsTune, predictor_testing)
+#pred_train = predict(plsTune, predictor_training)
+
+pred_df <- data.frame(obs = target_testing, pred = pred_test)
+defaultSummary(pred_df)
+```
+
+We get RMSE = 1.3138455 which is better then the above metric.
+
+### E. Which predictors are most important in the model you have trained? Do either the biological or process predictors dominate the list?
+
+We can see that RMSE is minimal at n=3 RMSE = 1.460762  Next we can review the importance graphically.
+
+
+```{r}
+plot(varImp(plsTune))
+```
+
+We can see that top predictors are mostly manufacturing processes.The first predictor of bialogical nature is #7, so it is safe to conclude that manufatucring processes have much higher impact on target yield.
+
+### F.  Explore the relationships between each of the top predictors and the response. How could this information be helpful in improving yield in future runs of the manufacturing process?
+
+We will take top 3 predictors and plot them against our target variable.
+
+```{r}
+plot(data$ManufacturingProcess32, target)
+abline(lm(target~data$ManufacturingProcess32),col="red",lwd=1.5)
+
+plot(data$ManufacturingProcess17, target)
+abline(lm(target~data$ManufacturingProcess17),col="red",lwd=1.5)
+
+plot(data$ManufacturingProcess36, target)
+abline(lm(target~data$ManufacturingProcess36),col="red",lwd=1.5)
+```
+
+We can see that Manifacturing process32 has a positive corelation with the target and manufacturing process36 and 17 have negative corelation with the target. This means we could adjust the variables to potentially increase the yield.
+
+### Conclusion
+
+Since we have conluded that manufacturing process variables are the most important and have the greatest impact on yield and we have identified the ones we are interested the most and have a corelation information to yield, we belive we can improve the oevral yield.  
+
+We would suggest to run more tests with various manifacturing process numbers and to model the most effecient combination which could boost the yield and boost the profits. It is highly likely that such a research would produce positive results and can have a significant impact on sales numbers.

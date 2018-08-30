@@ -1,0 +1,80 @@
+---
+title: "Initial Keyword Scrapping"
+author: "Ahsanul Choudhury"
+date: "October 19, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Initial Data Scraping
+##Summary
+In this portion of the project we scraped the .csv file that contains data from monster.com. We have extracted what we think as the most valuable skill for data scientists and created a .csv file with a new column containing the key words.
+
+
+##Summary of Code
+
+```{r library, include=TRUE}
+library(dplyr)
+library(stringr)
+```
+
+-Load data from local drive
+
+```{r load_data, include=TRUE}
+data.raw <- read.csv("monster.csv", header = TRUE, stringsAsFactors = FALSE)
+data.raw[] <- lapply(data.raw, tolower)
+```
+
+-Load keyword tags
+
+```{r tags, include=TRUE}
+<<<<<<< HEAD
+tags <- c(' r ',' r . ', ' c++ ', 'python', 'java', 'ruby', 'javascript',
+=======
+tags <- c(' r ',' r. ', ' c++ ', 'python', 'java', 'ruby', 'javascript',
+>>>>>>> 2c1a1277cf1b70add4891337b348c6db1efa15b2
+			    'matlab', 'scala', 'excel',	'tableau', 'd3.js', 'sas','spss',	'd3',
+          'hadoop', 'mapreduce',	'spark', 'pig',	'hive',	'shark','oozie',
+			    'zookeeper', 'flume',	'mahout',	'sql', 'snosql','hbase','cassandra',
+			    'mongodb', 'amazon s3', 'unstructured data', 'structured data',
+          'structured', 'intellectual curiosity', 'business acumen',                       'communication', 'data visualization', 'data munging',
+          'machine learning', 'calculus', 'linear algebra', 'statistics',
+          'software engineering', 'scientific method', 'math', 'product design',
+          'product development', 'database administration', 'project management',
+          'data mining', 'predictive modeling', 'predictive analytics', ' bi ',
+          ' b.i. ', 'business intelligence', 'optimization', 'text mining',
+          'cloud management', 'big data', ' viz ', 'bayesian statistics',
+          'bayesian analysis', ' n.l.p ', ' nlp ', 'natural language processing',
+          'simulation', 'simulations', 'classification', 'clustering',                     'regression', ' glm ', ' glms ', 'generalized linear models', 
+          'entrepreneurial', 'entrepreneur', 'least squares', ' roc ', 
+          'data wrangling', 'storyteller', 'storytelling', 'hacking',
+          'deep learning', 'neural network', 'neural networks', 'sci-kit learn',
+          'pandas', 'numpy', 'microsoft power bi', 'knime', 'octave',                      'rapidminer', 'minitab', 'stata', 'h20', 'curious', 'xlstat', '@risk',
+          'random forest', 'decision tree', 'time series', 'random tree',
+          'probability', 'dato', 'ggplot', 'ggvis'
+
+)
+```
+
+
+-Extract keywords from "description" column and create new column with keywords
+
+```{r keyword_tags, include=TRUE}
+tag_ex <- paste0('(', paste(tags, collapse = '|'), ')')
+data <- data.raw %>%
+mutate(keywordtag = sapply(str_extract_all(description, tag_ex), function(x) paste(x, collapse=',')))
+```
+
+-Create .csv file
+
+```{r csv, include=TRUE}
+<<<<<<< HEAD
+write.csv(data, file = "data1.csv", row.names = FALSE)
+=======
+write.csv(data, file = "data2.csv", row.names = FALSE)
+>>>>>>> 2c1a1277cf1b70add4891337b348c6db1efa15b2
+```
+

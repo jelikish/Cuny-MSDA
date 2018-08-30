@@ -1,0 +1,917 @@
+---
+title: "Project 3: Data Science Skills"
+author: "Aaron Grzasko, Ahsanul Choudhury, Andrew Carson, Bruce Hao, Daniel Thonn, Dhananjay Kumar, Joseph Elikishvili"
+date: "October 23, 2016"
+output: 
+  html_document:
+    highlight: tango
+    theme: united
+    pdf_document: default
+---
+
+### Summary of Assignment:
+
+This project involes downloading Data Science skills from the internet then processing and presenting the data with graphs and analytics.  The goal: to answer the question, **"Which are the most valued data science skills?"**
+
+* * *
+
+
+### Monster WebScraping
+#### Joseph Elikishvili,Dhanajay Kumar
+
+#####Web scraping Summary
+
+We attempted to scrape job postings from indeed.com and monster.com. Our effort with regards to indeed.com was not successful as the custom API package we found provided limited functionality and challenges such as: inability to scrape a large percentage of job postings, having issues with having job urls being redirected to a employers site, being unable to parse some of the employer sites as job listings where part html page and finally dealing with a large number of duplicate postings. We were able to deal with most of the issues such as url redirects and mitigated some of the ssl related issues, but decided that the very low number of unique job postings made this approach unworkable.
+
+Next we attempted to scrape monster.com which does not redirect job postings and has a useful data embedded into the urls. We had an issue scraping the monster.com directly and tried a number of packages to do that, but where unsuccessful, we finally decided to extract the job posting urls by using http://www.bulkdachecker.com/url-extractor/ tool and extracted 25 links per page. This pre-processing step is semi-automated but works well for the intended purpose.  We processed a total of 1000 postings out of which we were able to extract about 450 searchable job post.
+
+Once we extract the links we store them in links.csv file which is read by R.
+
+The following is the Summary of the code used for web scraping
+
+Below we are loading the necessary libraries, reading the file with URLs, parsing the URLs and storing the job description into the column of the data frame
+
+
+```{r, eval=FALSE}
+library(boilerpipeR)
+library(RCurl)
+library(stringr)
+
+#read the file with urls
+list = read.csv("https://cdn.rawgit.com/dhnanjay/607Project3/master/directlinks/links.csv", stringsAsFactors = FALSE)
+
+
+#parsing each url and saving job text into description column
+for (i in 1:nrow(list))
+{
+  content <- getURL(list$Link[i])
+  extract <- DefaultExtractor(content)
+  list$description[i] = extract
+}
+
+#getting rid of entries with an empty description
+list = subset(list, list$description != "")
+```
+
+**Extraction of additional data from URL**
+
+Monster urls have additional information embedded into the URL and because of that we are able to extract: Job title, City and State.  
+
+Example URL:
+http://jobview.monster.com/consulting-data-scientist-job-charlotte-nc-us-173969790.aspx?mescoid=1500152001001&jobPosition=1
+
+**We extract the data we need with the following code**
+
+```{r, eval=FALSE}
+#extracting job title, city, state from url and adding them as columns
+
+for (i in 1:nrow(list))
+{
+  r_extract=str_match(list$Link[i], "http://jobview.monster.com/(.*)-job-(.*)-(\\w\\w)-us.*")
+  list$Job_Title[i] = r_extract[2]
+  list$City[i] = r_extract[3]
+  list$State[i] = r_extract[4]
+}
+
+#writing dataframe to a csv
+write.csv(list, file = "monster.csv")
+```
+
+#####Conclusion:
+After working with different sites and packages, we realized that there is no unique way of scraping the data from the web and each solution needs to be tailored for the specific purpose and the specific website. This task might be challenging in certain situations, but additional tools can be usefull to extract the data and this task does not have to limited to using R. We briefly worked with httr package which is great for handling url redirects and used boilerpipeR package which is an easy to use and powerful parser of html pages.
+
+* * *
+
+###Initial Keyword Scraping
+####Ahsanul Choudhury
+
+#####Summary
+In this portion of the project we scraped the .csv file that contains data from monster.com. We have extracted what we think as the most valuable skill for data scientists and created a .csv file with a new column containing the key words.
+
+
+#####Summary of Code
+
+```{r library, include=TRUE, eval=FALSE}
+library(dplyr)
+library(stringr)
+
+
+#Load data from local drive
+
+{r load_data, include=TRUE}
+data.raw <- read.csv("monster.csv", header = TRUE, stringsAsFactors = FALSE)
+data.raw[] <- lapply(data.raw, tolower)
+
+
+#Load keyword tags
+
+
+#HEAD
+tags <- c(' r ',' r. ', ' c++ ', 'python', 'java', 'ruby', 'javascript',
+			    'matlab', 'scala', 'excel',	'tableau', 'd3.js', 'sas','spss',	'd3',
+          'hadoop', 'mapreduce',	'spark', 'pig',	'hive',	'shark','oozie',
+			    'zookeeper', 'flume',	'mahout',	'sql', 'snosql','hbase','cassandra',
+			    'mongodb', 'amazon s3', 'unstructured data', 'structured data',
+          'structured', 'intellectual curiosity', 'business acumen',                       'communication', 'data visualization', 'data munging',
+          'machine learning', 'calculus', 'linear algebra', 'statistics',
+          'software engineering', 'scientific method', 'math', 'product design',
+          'product development', 'database administration', 'project management',
+          'data mining', 'predictive modeling', 'predictive analytics', ' bi ',
+          ' b.i. ', 'business intelligence', 'optimization', 'text mining',
+          'cloud management', 'big data', ' viz ', 'bayesian statistics',
+          'bayesian analysis', ' n.l.p ', ' nlp ', 'natural language processing',
+          'simulation', 'simulations', 'classification', 'clustering',                     'regression', ' glm ', ' glms ', 'generalized linear models', 
+          'entrepreneurial', 'entrepreneur', 'least squares', ' roc ', 
+          'data wrangling', 'storyteller', 'storytelling', 'hacking',
+          'deep learning', 'neural network', 'neural networks', 'sci-kit learn',
+          'pandas', 'numpy', 'microsoft power bi', 'knime', 'octave',                      'rapidminer', 'minitab', 'stata', 'h20', 'curious', 'xlstat', '@risk',
+          'random forest', 'decision tree', 'time series', 'random tree',
+          'probability', 'dato', 'ggplot', 'ggvis'
+
+)
+
+
+
+#Extract keywords from "description" column and create new column with keywords
+tag_ex <- paste0('(', paste(tags, collapse = '|'), ')')
+data <- data.raw %>%
+mutate(keywordtag = sapply(str_extract_all(description, tag_ex), function(x) paste(x, collapse=',')))
+
+
+#Create .csv file
+write.csv(data, file = "data.csv", row.names = FALSE)
+```
+* * *
+
+###Importing Scraped Data to MySQL from R (ETL)
+####Bruce Hao
+
+#####Summary: 
+Although the data acquisition, exploration and analysis processes were conducted in R, the data is stored in MySQL to faciliate permanent storage and access. This step is comprised of several sub-steps outlined below:  
+
+* Read data from data acquisition process into data frame (note: in the code below, the data was read in from a csv file, but could just as easily be read in directly from the web scraping output).  
+* Transform data to ready it for import into the correct database tables. In this particular case, there are three tables to house unique roles, locations and keywords, and there are two tables that facilitate the many-to-many relationships.  
+* Create connection to MySQL database and import data into respective tables. 
+
+
+#####Future Work:
+
+* Add flexibility to import scripts. As is, the scripts below assign primary keys based as 1:n and are thus designed for a one-time import of data. Subsequent incremental imports will fail due to duplicate primary keys. This can be resolved by having the database auto-increment additions and remove duplicates.  
+* Currently, the transform and load process requires 3-4 lines of code for each table. A function could be used to minimize replicating similar code for each database table. The function would need to be flexible enough to deal with different column numbers and names within each table.   
+
+
+#####Summary of Code:
+
+```{r message=FALSE, warning=FALSE, eval=FALSE}
+library(stringr)
+library(dplyr)
+library(dbConnect)
+
+
+#Create connection to database and load acquired data into data frame.
+
+username = 'data607'
+password = 'project3'
+dbname = 'ds_skills'
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com'
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host)
+
+my_data <- read.csv("data.csv", stringsAsFactors = FALSE)
+
+
+# * Remove duplicates and non-SQL-friendly characters from data to be imported  
+# * Create primary key (ID) for each unique record to be imported  
+# * Create string to house values to be inserted in SQL query  
+# * Run INSERT query to import data into SQL  
+# * Repeat process for each of the five database tables  
+
+
+#roles df
+role_desc <- unique(str_replace(my_data$Job_Title, "\\'", ""))  # BH: removed apostrophes for SQL 
+
+#import
+role_id <- seq.int(length(role_desc))
+roles <- data.frame(role_id=role_id,role_desc=role_desc)
+roles = roles %>% mutate(insertValue = paste0("(", role_id, ", '", role_desc, "')"))
+insertValues = paste(unlist(roles$insertValue), collapse = ', ')
+insertQry = dbSendQuery(myDb, paste0("INSERT INTO roles VALUES ", insertValues, ";"))
+fetch(insertQry, n = -1)
+
+#location df
+locations <- unique(my_data[,c("City","State")])
+locations <- cbind(loc_id =  seq.int(nrow(locations)), locations)
+locations = locations %>% mutate(insertValue = paste0("(", loc_id, ", '", City, "', '", State, "')"))
+insertValues = paste(unlist(locations$insertValue), collapse = ', ')
+insertQry = dbSendQuery(myDb, paste0("INSERT INTO locations VALUES ", insertValues, ";"))
+fetch(insertQry, n = -1)
+
+#keywords df
+key_list <- unlist(str_split(tolower(my_data$keywordtag),","))
+key_desc <- unique(key_list[key_list!=""])
+key_id <- seq.int(length(key_desc))
+keywords <- data.frame(key_id = key_id, key_desc = key_desc)
+keywords = keywords %>% mutate(insertValue = paste0("(", key_id, ", '", key_desc, "')"))
+insertValues = paste(unlist(keywords$insertValue), collapse = ', ')
+insertQry = dbSendQuery(myDb, paste0("INSERT INTO keywords VALUES ", insertValues, ";"))
+fetch(insertQry, n = -1)
+
+#post_keys df
+key_list <- str_split(tolower(my_data$keywordtag),",")
+key_list <- lapply(key_list,unique)
+post_id = integer(); key_desc = character()
+for (i in 1:length(key_list)){
+  for (j in 1:length(key_list[[i]])) {
+    post_id <- append(post_id,i)
+    key_desc <- append(key_desc,key_list[[i]][[j]])
+  }
+}
+post_keys <- data.frame(post_id = post_id,key_desc = key_desc)
+post_keys <- filter(post_keys, key_desc != "" & key_desc !=" ")
+post_keys <- merge(keywords, post_keys, by = "key_desc")
+post_keys <- subset(post_keys, select = c(post_id, key_id))
+post_keys = post_keys %>% mutate(insertValue = paste0("(", post_id, ", '", key_id, "')"))
+insertValues = paste(unlist(post_keys$insertValue), collapse = ', ')
+insertQry = dbSendQuery(myDb, paste0("INSERT INTO post_keys VALUES ", insertValues, ";"))
+fetch(insertQry, n = -1)
+
+#jobs df
+jobs <- my_data
+names(jobs)[names(jobs)=="Job_Title"] <- "role_desc"
+names(jobs)[names(jobs)=="X.1"] <- "post_id"
+jobs <- merge(jobs, roles, by ="role_desc")
+jobs <- merge(jobs, locations, by= c("City","State"))
+jobs <- subset(jobs, select= c(post_id,role_id,loc_id))
+jobs = jobs %>% mutate(insertValue = paste0("(", post_id, ", ", role_id, ", ", loc_id, ")"))
+insertValues = paste(unlist(jobs$insertValue), collapse = ', ')
+insertQry = dbSendQuery(myDb, paste0("INSERT INTO jobs VALUES ", insertValues, ";"))
+fetch(insertQry, n = -1)
+```
+
+* * *
+
+### Analysis
+
+####Andrew Carson
+
+##### Load Data
+
+Now we load the data from the MySQL database.  First, a connection is created, then a query is formed.  The query is fetched and the results are returned.
+
+```{r eval=TRUE, message=FALSE}
+# Clear Workspace
+rm(list=ls())
+
+library(dbConnect)
+
+
+#set variables for connecting to MySQL
+username = 'data607'
+
+password = 'project3'
+
+dbname = 'ds_skills'
+
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com'
+
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host)
+
+
+#write query string to pull data from tables in MySQL
+qryString = 'SELECT jobs.post_id, role_desc, city, state, keyword_desc 
+
+FROM jobs
+
+INNER JOIN locations
+
+ON jobs.loc_id = locations.loc_id
+
+INNER JOIN roles
+
+ON jobs.role_id = roles.role_id
+
+INNER JOIN post_keys
+
+ON jobs.post_id = post_keys.post_id 
+
+INNER JOIN  keywords
+
+ON post_keys.key_id = keywords.key_id
+
+;'
+
+
+#pull query
+selectQry = dbSendQuery(myDb, qryString)
+results = fetch(selectQry, n = -1)
+
+#display first 10 rows
+head(results, n=10)
+```
+* * *
+
+##### Analysis
+Our task is to answer the question: "Which are the most valued data science skills?"  The easiest way to answer this is to look at the most frequent keywords in our dataset.
+
+```{r, message=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(knitr)
+library(DT)
+library(stringr)
+
+#trim white space
+results$keyword_desc<-str_trim(results$keyword_desc)
+
+# counts of keywords
+keyword_counts<-data.frame(table(results$keyword_desc))
+names(keyword_counts)<-c("Keyword","Freq")
+keyword_counts$Keyword<-as.character(keyword_counts$Keyword)
+head(arrange(keyword_counts,desc(Freq)), n=11)
+```
+
+We see that communication tops the list, followed by Excel, JAVA, SQL, machine learning, and Python.  R comes in at number 11.
+
+We add a plot to visualize the result.
+```{r, message=FALSE}
+#plot of keyword counts
+qplot(data = keyword_counts, x = reorder(Keyword, -Freq), y=Freq, xlab="Keyword", ylab="Frequency", main = "Keywords by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+Overall, we see programming languages (JAVA, Python), statistical languages (R, SAS), big data languages(Pig, Hive), big data technologies (mapreduce, Hadoop), standard data skills (Excel, SQL), and visualization (Tableau, d3).  We also see a lot of "soft skills" or broad topic knowledge like communication, deep learning, math, "big data", "data mining", etc.
+
+Adding nuance, what sorts of roles are we looking at that matched our search query when finding data?
+
+```{r, message=FALSE}
+#count of role description
+distinct_roles<-distinct(select(results, post_id,role_desc))
+distinct_roles<-data.frame(table(distinct_roles$role_desc))
+names(distinct_roles)<-c("Role","Freq")
+head(arrange(distinct_roles,desc(Freq)), n=10)
+
+#plot of role description
+qplot(data = subset(distinct_roles, Freq>3), x = reorder(Role, -Freq), y=Freq, xlab="Role", ylab="Frequency", main = "Role by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+The most frequent is "data-scientist", which makes sense since this is what we were looking for.  We can also see "machine-learning", "software-engineer", and "statistician" in the list.  Most role descriptions are unique, but could be further grouped if desired.
+
+How do roles and skills align?  Take a look at the below table, and sort on the keyword to find which job titles use this skill the most:
+
+```{r, message=FALSE}
+#role vs. keyword counts
+role_vs_Keyword<-results %>%
+  select(role_desc,keyword_desc) %>%
+  group_by(role_desc, keyword_desc) %>%
+  count(role_desc, keyword_desc) %>%
+  spread(role_desc,n)
+  
+
+#keyword vs. role
+keyword_vs_role<-results %>%
+  select(role_desc,keyword_desc) %>%
+  group_by(role_desc, keyword_desc) %>%
+  count(role_desc, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+#which roles require which skills?
+datatable(keyword_vs_role)
+```
+
+Since we are most interested in "data scientists", let's look at job titles that match "data-scientist":
+
+```{r, message=FALSE, warning=FALSE}
+# show top keywords for data-scientist
+top_data_scientist<-
+  arrange(role_vs_Keyword, desc(`data-scientist`)) %>%
+  select(keyword_desc, `data-scientist`) 
+
+#plot data-scientist
+qplot(data = top_data_scientist, x = reorder(keyword_desc, -`data-scientist`), y=`data-scientist`, xlab="Keyword", ylab="Frequency", main = "Data Scientist: Keyword by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1)) 
+```
+
+Machine learning, Excel, Python, statistics, Hadoop, R, and communication are the top skills.
+
+What about anything that matches the pattern "data-scien"?  This will include all levels of data scientists and other job titles that have this pattern in it.
+
+```{r, message=FALSE}
+# show top keywords for anything like data scientist
+top_data_scientist_all<-
+  results %>%
+  subset(str_detect(role_desc,"data-scien")) %>%
+  select(keyword_desc) %>%
+  group_by(keyword_desc) %>%
+  count(keyword_desc) %>%
+  arrange(desc(n))
+
+#plot data-scientist: all
+qplot(data = top_data_scientist_all, x = reorder(keyword_desc, -n), y=n, xlab="Keyword", ylab="Frequency", main = "All 'Data Scientists': Keyword by Frequency", size=I(5)) +
+      theme(text = element_text(),
+        axis.text.x = element_text(angle=90, vjust=1))   
+```
+
+We have machine learning, Python, Statistics, Math, SQL, data mining, communication, and R. 
+
+Where are these jobs being offered?  We collected the city and state information with these job postings:
+```{r}
+#count of city
+distinct_city<-distinct(select(results, post_id, city))
+distinct_city<-data.frame(table(distinct_city$city))
+names(distinct_city)<-c("city","Freq")
+head(arrange(distinct_city,desc(Freq)), n=10)
+```
+
+Seattle is the top city at 69, followed by Chicago at 10, and Plano at 9.
+
+What is your city's favorite data science skill?
+
+```{r}
+#city vs. keyword counts
+city_vs_Keyword<-results %>%
+  select(city,keyword_desc) %>%
+  group_by(city, keyword_desc) %>%
+  count(city, keyword_desc) %>%
+  spread(city,n)
+  
+#keyword vs. city counts
+keyword_vs_city<-results %>%
+  select(city,keyword_desc) %>%
+  group_by(city, keyword_desc) %>%
+  count(city, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+datatable(keyword_vs_city)
+```
+
+Finally, we have the state.  Washington, California, and Texas have the most job postings.  Which skills does your state prefer?
+```{r}
+#count of state
+distinct_state<-distinct(select(results, post_id, state))
+distinct_state<-data.frame(table(distinct_state$state))
+names(distinct_state)<-c("state","Freq")
+head(arrange(distinct_state,desc(Freq)), n=10)
+
+
+#state vs. keyword counts
+state_vs_Keyword<-results %>%
+  select(state,keyword_desc) %>%
+  group_by(state, keyword_desc) %>%
+  count(state, keyword_desc) %>%
+  spread(state,n)
+  
+#keyword vs. state counts
+keyword_vs_state<-results %>%
+  select(state,keyword_desc) %>%
+  group_by(state, keyword_desc) %>%
+  count(state, keyword_desc) %>%
+  spread(keyword_desc,n)
+
+datatable(keyword_vs_state)
+
+# Clear Workspace
+rm(list=ls())
+```
+
+##### Conclusion
+Our team found that many skills we expected to be popular were: Python, Excel, big data technologies, machine learning, SQL.  Perhaps most surprising is that "communication" is the top skill. Clearly, "soft skills" are still very important even for more technically oriented data scientists.
+
+Another surprising result was that R is not as popular as we thought it would be.  This may be due to the difficulty of extracting "R" from the text of a job description, as we would expect it to be on par with Python in popularity.  We did some work on getting better extraction of "R", and while its numbers did improve, it still lags behind Python by quite a bit.
+
+* * *
+
+###Analytic Models
+####Daniel Thonn
+
+#####Notes:
+
+reference-1: "http//www.cs.ukzn.ac.za/~hughm/dm/content/slides06.pdf"
+
+reference-2: "http//www.rdatamining.com/examples/decision-tree"
+
+##### Setting up and Preparing the Environment
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=TRUE, message=FALSE}
+
+#packages and libraries
+
+#library for building basic decision tree
+library(rpart)
+
+#library for ctree decision tree
+#install.packages("party")
+library(party)
+
+#library for randomForest decision tree
+#install.packages("randomForest")
+library(randomForest)
+
+#install.packages("dbConnect")
+library(dbConnect) 
+
+#install.packages("gplot2")
+library(ggplot2)
+
+#install.packages("tidyr")
+library(tidyr)
+library(dplyr)
+library(knitr)
+library(plyr)
+
+#install.packages("caret")
+library(caret)
+
+```
+
+##### Retreive data from database
+
+```{r, echo=TRUE}
+
+username = 'data607' 
+password = 'project3' 
+dbname = 'ds_skills' 
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com' 
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host) 
+ 
+ 
+qryString = 'SELECT jobs.post_id, role_desc, city, state, keyword_desc  
+             FROM jobs 
+             INNER JOIN locations 
+             ON jobs.loc_id = locations.loc_id 
+             INNER JOIN roles 
+             ON jobs.role_id = roles.role_id 
+             INNER JOIN post_keys 
+             ON jobs.post_id = post_keys.post_id  
+             INNER JOIN  keywords 
+             ON post_keys.key_id = keywords.key_id 
+             ;' 
+ 
+ 
+selectQry = dbSendQuery(myDb, qryString) 
+results = fetch(selectQry, n = -1) 
+
+#results
+head(results)
+#results
+str(results)
+
+```
+
+##### Create a graph of Role vs Sum of Skills for the top 10 roles
+
+```{r, echo=TRUE}
+results1 <- select(results, role_desc, keyword_desc)
+
+results2 <- count(results1, c("role_desc", "keyword_desc")) 
+
+results3 <- spread(results2, keyword_desc, freq) 
+
+results3[is.na(results3)] <- 0 
+#results3
+
+names(results3) <- sub(" ", "", names(results3))
+names(results3) <- sub(" ", "", names(results3))
+#results3
+
+results4 <- results3
+#results4
+#head(results4)
+
+# Add a row sum
+results5 <- transform(results4, sum=rowSums(results4[,-1]))
+#head(results5)
+
+# Obtain two columns role_desc and sum
+results6 <-  results5[ , c("role_desc","sum")]
+#head(results6)
+
+# Take top 10 roles order by skills descending
+results7 <- head(arrange(results6,desc(sum)), n = 10)
+#head(results7)
+#str(results7)
+
+# Graph Role vs Sum of Skills
+results7 %>% 
+      ggplot( aes(x=role_desc, y=sum, fill=role_desc)) +
+    geom_bar(stat="identity", position=position_dodge(), colour="black", width = 0.5) +
+    ggtitle("Role vs Skill Sum") +
+    xlab("Role") + ylab("Skill Sum") +
+    geom_text(aes(label=paste(sum)), vjust=0.5, hjust=1.1,color="black") +
+    theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+
+```
+
+
+##### Cleanup Data, plot Decistion Trees, and create Predictive Models
+
+```{r, echo=TRUE}
+
+#This section creates a table of non-distinct role_desc vs keyword_desc 
+
+#str(results)
+
+role_vs_Keyword_a <- results %>%
+  select(role_desc,keyword_desc) 
+
+head(role_vs_Keyword_a)
+#str(role_vs_Keyword_a)
+
+role_vs_Keyword_b <- role_vs_Keyword_a
+#head(role_vs_Keyword_b)
+role_vs_Keyword_b2 <- role_vs_Keyword_b
+#head(role_vs_Keyword_b2)
+#str(role_vs_Keyword_b2)
+#role_vs_Keyword_b2$keyword_desc
+role_vs_Keyword_b2$keyword_desc <- gsub(" r;", "r",role_vs_Keyword_b2$keyword_desc)
+role_vs_Keyword_b2$keyword_desc <- gsub("r ", "r",role_vs_Keyword_b2$keyword_desc)
+role_vs_Keyword_b2$keyword_desc <- gsub(" r", "r",role_vs_Keyword_b2$keyword_desc)
+role_vs_Keyword_b2$keyword_desc <- gsub("r] ", "r",role_vs_Keyword_b2$keyword_desc)
+role_vs_Keyword_b2$row <- rep(1,nrow(role_vs_Keyword_b2))
+role_vs_Keyword_b2$row2 <- 1:nrow(role_vs_Keyword_b2)
+#head(role_vs_Keyword_b2)
+
+# Spread keyword values to columns
+wide <- spread(role_vs_Keyword_b2,keyword_desc,row)
+#head(wide)
+
+# Cleanup data frame:
+#str(wide)
+wide_2 <- wide
+wide_2[is.na(wide_2)] <- 0
+#head(wide_2)
+#str(wide_2)
+#names(wide_2)
+wide_2$role_desc<-as.factor(wide_2$role_desc)
+names(wide_2) <- sub(" ", "", names(wide_2))
+names(wide_2) <- sub(" ", "", names(wide_2))
+
+#names(wide_2)
+#head(wide_2)
+wide_3 <- subset(wide_2,select= -c(row2))
+#head(wide_3)
+#list(wide_3$role_desc)
+wide_4 <- wide_3
+wide_4$role2 <- gsub(" r ","r",wide_4$role_desc)
+
+# Consolidate roles for analysis
+wide_4$role2 <- gsub(".*data-scientist.*", "data-scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*data-engineer.*", "data-engr", wide_4$role2)
+wide_4$role2 <- gsub(".*analytics.*", "analytics", wide_4$role2)
+wide_4$role2 <- gsub(".*development.*", "developer", wide_4$role2)
+wide_4$role2 <- gsub(".*developer.*", "developer", wide_4$role2)
+wide_4$role2 <- gsub(".*statistician.*", "statistician", wide_4$role2)
+wide_4$role2 <- gsub(".*analyst.*", "analyst", wide_4$role2)
+wide_4$role2 <- gsub(".*manager.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*mba.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*machine.*", "analytics", wide_4$role2)
+wide_4$role2 <- gsub(".*analytical.*", "analytics", wide_4$role2)
+wide_4$role2 <- gsub(".*big-data.*", "big-data-engr", wide_4$role2)
+wide_4$role2 <- gsub(".*nurse.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*NA.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*billing.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*software-engineer.*", "developer", wide_4$role2)
+wide_4$role2 <- gsub(".*research.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*voice.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*systems.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*technical.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*hadoop.*", "data-engr", wide_4$role2)
+wide_4$role2 <- gsub(".*assessment.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*stormwater.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*programmer.*", "developer", wide_4$role2)
+wide_4$role2 <- gsub(".*sdet.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*sales.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*chemist.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*qa.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*mckinsey.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*specialist.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*quality.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*technician.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*metallurgist.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*entry-level.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*software.*", "developer", wide_4$role2)
+wide_4$role2 <- gsub(".*environmental.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*electrical.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*construction.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*customer.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*class.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*director.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*applied.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*benefits.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*marketing.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*medical.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*healthcare.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*microbiologist.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*cash.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*geologist-2.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*mgr.*", "manager", wide_4$role2)
+wide_4$role2 <- gsub(".*validation.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*biologist.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*cna.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*learning.*", "analytics", wide_4$role2)
+wide_4$role2 <- gsub(".*engineer.*", "engineer", wide_4$role2)
+wide_4$role2 <- gsub(".*control.*", "engineer", wide_4$role2)
+wide_4$role2 <- gsub(".*retail.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*pbmc-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*clinical-lab-scientist-lab.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*senior-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*acquisition.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*sr-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*certifying-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*lab-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*big-data.*", "analytics", wide_4$role2)
+wide_4$role2 <- gsub(".*nursing.*", "other", wide_4$role2)
+wide_4$role2 <- gsub(".*project-scientist.*", "scientist", wide_4$role2)
+wide_4$role2 <- gsub(".*data-technology.*", "data-engr", wide_4$role2)
+
+#unique(wide_4$role2)
+
+wide_5 <- subset(wide_4,select= -c(role_desc))
+#wide_5$role2
+wide_5$role2<-as.factor(wide_5$role2)
+#levels(wide_5$role2)
+
+#list(wide_5)
+
+
+target2 <- role_desc ~ .
+target2b <- role2 ~ .
+#Create and plot ctree of dataframe - full set - 1
+skill_ctree <- ctree(role_desc ~ excel, data=wide_3)
+plot(skill_ctree)
+
+levels(wide_5$role2)
+
+#Create and plot ctree of dataframe - partial set - 1
+skill_ctreeb <- ctree(role2 ~ excel, data=wide_5)
+plot(skill_ctreeb)
+
+levels(wide_5$role2)
+
+# Predict by Random Forest Method
+#names(wide_3)
+#wide_2$role_desc
+
+# Create a predictive model of the data - rf
+rf <- randomForest(target2,data=wide_3,ntree=1000,proximity=TRUE)
+#table(predict(rf),wide_2$role_desc)
+
+names(wide_3)
+#str(wide_3)
+#count(wide_3,2:67)
+
+newdata <- data.frame(bi=0,
+                      nlp = 0,
+                      amazons3=0,
+                      bigdata=1,
+                      businessacumen=1,
+                      businessintelligence = 0,
+                      cassandra = 0,
+                      classification = 1,
+                      clustering =1,
+                      communication=1,
+                      curious=1,
+                      d3=0,
+                      d3.js=0,
+                      datamining=1,
+                      datavisualization=1,
+                      databaseadministration=0,
+                      dato=0,
+                      decisiontree=1,
+                      deeplearning=0,
+                      entrepreneur=0,
+                      entrepreneurial=0,
+                      excel=1,
+                      flume=0,
+                      ggplot=1,
+                      hadoop=1,
+                      hbase=0,
+                      hive=0,
+                      intellectualcuriosity=1,
+                      java=0,
+                      knime=1,
+                      machinelearning=1,
+                      mahout=0,
+                      mapreduce=0,
+                      math=1,
+                      matlab=0,
+                      minitab=0,
+                      mongodb=1,
+                      naturallanguageprocessing=0,
+                      neuralnetwork=0,
+                      oozie=0,
+                      optimization=1,
+                      pandas=0,
+                      pig=0,
+                      predictiveanalytics=1,
+                      predictivemodeling=1,
+                      probability=1,
+                      productdevelopment=0,
+                      projectmanagement=0,
+                      python=1,
+                      r=1,
+                      randomforest=1,
+                      rapidminer=1,
+                      regression=1,
+                      rf=0,
+                      rn=0,
+                      ruby=0,
+                      sas=0,
+                      scala=1,
+                      shark=0,
+                      simulation=1,
+                      softwareengineering=0,
+                      spark=1,
+                      spss=0,
+                      sql=1,
+                      stata=0,
+                      statistics=1,
+                      structured=0,
+                      structureddata=0,
+                      tableau=0,
+                      textmining=0,
+                      timeseries=0,
+                      unstructureddata=1,
+                      zookeeper=0
+                      )
+
+# Prediction - single test data - large data set
+p <- predict(rf,newdata)
+p
+#prediction: data-scientist 
+
+# Accuracy - single test data - large data set
+mean(p == wide_3$role_desc)
+#[1] 0.1544061
+
+target2b <- role2 ~ .
+rf2 <- randomForest(target2b,data=wide_5,ntree=1000,proximity=TRUE)
+
+# Prediction - single test data - small data set
+p2 <- predict(rf2,newdata)
+p2
+#prediction: data-scientist 
+
+# Accuracy - single test data - small data set
+mean(p2 == wide_5$role2)
+#[1] 0.3701149
+
+# Create a set of training and test data
+train = sample(1:nrow(wide_5), 500)
+wide_5_train <- wide_5[train,]
+#str(wide_5_train)
+levels(wide_5_train$role2)
+wide_5_test <- wide_5[-train,]
+
+rf3 <- randomForest(target2b,data=wide_5_train,ntree=1000,proximity=TRUE)
+
+# Prediction - single test data - training data set
+p3 <- predict(rf3,newdata)
+p3
+#prediction: data-scientist 
+
+# Accuracy - single test data - training model
+mean(p3 == wide_5_train$role2)
+#[1] 0.382
+
+# Prediction - full test data - training data set
+p4 <- predict(rf3,wide_5_test)
+#p4
+
+# Accuracy - full test data - training model
+mean(p4 == wide_5_test$role2)
+#[1] 0.3578199
+
+```
+
+##### Conclusion:
+The highest number of skills are required for the role data-scientist using the original large data set with 2610 job descriptions with 188 roles and 75 skills as shown in the graph above.
+
+
+A smaller more focused results using 10 roles was produced for comparison.  The smaller dataset produced more readable decision trees.  The skill of excel was the only one with a sufficient data relationship to create a decision tree and this skill was found to be more prominent for data scientists and the general other role.  
+
+The larger data set (188 roles) produced  prediction of data scientist for 75 input skills with an accuracy of .15.  The smaller set (10 roles) produced a prediction of analytics for the same input with an accuracy of .37.  The smaller cleaner dataset produced more readable decision trees, and higher accuracy in prediction.
+
+
+#####Future work:
+1). Continue to clean data set and test additional combinations of skills for improved insight and results (shape and refine).
+2). Vigorously prune the data, and iterate, until best results are achieved.
+
+* * *
+
+### Team Conclusion:
+
+This project was an *iterative process* to steadily improve the quality of the data imported, processed, and analyzed.  There was a *discovery process* involved in scraping job websites and as to which processes worked and which didn't work.  *New tools* were discovered such as bulkdachecker and the library boilerpipeR.  Techniques were implemented to better capture additional keywords.  A *database* process was setup that is *flexible* to handle many-to-many relationships and setup a *robust database structure five tables* and a database process that could be *run repeatedly* and eliminate any duplicates during the load process.  Also the database was setup for *web access* using amazon web services.  
+
+*Extensive graphs* were provided to evaluate the data. Overall  the top skills were communication, followed by Excel, JAVA, SQL, machine learning, and Python.  For *data scientists*, Machine learning, Excel, Python, statistics, Hadoop, R, and communication were the top skills found.  Job postings were analyzed for top cities (Seattle, Chicago, and Plano,Texas) and states (Washington, California, and Texas) offering data science jobs.  There was an interactive graph to view the most popular data science skills by a user selected city using the R datatable function.  Predictive analytics (ctree, predict, and random forest) were done to show what role a person is bested suited for based on his or her skills.  Techniques were shown to *improve the accuracy* of the models.
+
+The group learned to work together as a data science team, sharing technologies and techniques learned along the way, expanding skills in collaboration, planning, and delivering on time within a structure as directed by the project manager.
+

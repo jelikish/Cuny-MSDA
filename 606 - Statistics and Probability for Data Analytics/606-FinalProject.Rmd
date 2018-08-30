@@ -1,0 +1,166 @@
+---
+title: "606-FinalProject"
+author: "Joseph Elikishvili"
+date: "December 10, 2016"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    theme: united
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(plotly)
+library(knitr)
+```
+
+## 1. Introduction
+
+I would like to take a look at IGNs data-set which is a collection of game reviews on ign.com for the past 20 years.  I would like to see how the average score of the games have changed over the time, also I would like to see if the average scored reviews is higher for Xbox or PlayStation games and finally I want to see how Strategy game reviews compare to the rest of the games.  I used to play computer and console games a lot and did not have time in the past 8 years so this is a good opportunity to see what is driving gaming market today and learn some interesting statistics describing the space.
+
+## 2. Data
+
+Data Collection: The data I will be working with is available at https://www.kaggle.com/egrinstein/20-years-of-games and represents a dataset that is a result of a crawl on http://ign.com/games/reviews
+
+Cases: each case represents a review of a particular title
+
+Variables: the variables I am interested in are: score, platform, genre, release_year
+
+Type of study: Observational Study. I want to simply observe the data, this is not the case where an experiment would make sense.
+
+Scope of inference: Our population is the games released within past 20 years. We are using a good sample collected from ign.com but we need to be careful about applying the results to entire population. There might be differences between the data at ign.com and other sources.  There could be a factor popularity of a site which might have changed within the past 20 years or the demographics of the users and so on. Nevertheless we have a pretty good sample which should produce interesting results and we just need to keep in mind the source of data and how it could be different from other sources.
+
+Scope of inference: I decided not to look for causality as I am dealing with mostly categorical data that has 20+ items and this is not the approach that would produce anything interesting in this particular case.
+
+## 3. Exploratory data analysis
+
+
+
+```{r}
+ign <- read.csv('ign.csv', stringsAsFactors=FALSE)
+#View the data
+kable(head(ign))
+
+#getting rid of anything before 1990 and cleaning up the data
+ign <- ign[ign$release_year > 1990,]
+#plot the releases/year
+p1 = ggplot(ign, aes(x=release_year)) + geom_bar(fill = "#0072B2")  + ggtitle("Games released by year")
+ggplotly(p1)
+# Boxplot per each year
+p2 = ggplot(ign, aes(x=factor(release_year), y=score)) + geom_boxplot(fill = "#0072B2") + ylim(c(0,10))
+ggplotly(p2)
+#plot the score
+ggplot(ign, aes(x=release_year, y=score)) + geom_smooth() + ggtitle("Average review scores ")
+
+#mark the quartile data
+ign$quartiles <- cut(ign$release_year,breaks = quantile(ign$release_year), include.lowest = TRUE)
+
+#Mark old and new for Q1 and Q3
+ign$NewOld <- NA
+ign[ign$quartiles == '[1996,2003]',]$NewOld <- 'Old'
+ign[ign$quartiles == '(2010,2016]',]$NewOld <- 'New'
+
+
+# Tidy genre and store into genre_primary
+genre <- strsplit(ign$genre, ',')
+genre <- sapply(genre, FUN=function(x) { x[1] })
+ign$genre_primary <- genre
+
+```
+
+## 4. Inference
+
+
+
+### Condition test
+
+Lets check the conditions for the t-test
+
+Independence of observations: There is no indication that the data is not independent. 
+
+Observations come from a nearly normal distribution: distribution is skewed to the left, but since n is pretty high and is > 30, so we can proceed with the test 
+
+```{r}
+hist(ign$score)
+```
+
+### Mean scores over time
+
+First Lets setup a hypothesis t-test to see weather the mean score has changed between Quartile1 and Quartile3, we will use the default settings with 95% confidence interval
+
+The following is the Hypotheses and the results
+
+#### H0: The means are equal
+#### Ha: The means are not equal
+
+```{r}
+t.test(score ~ NewOld, data=ign)
+```
+
+As we can see the p value is too small so we reject the the Null Hypothesis and conclude that the mean score has changed and in fact has decreased over the time. 
+
+### Console Wars
+
+Next I want to see if we can find the preference of users between Xbox console and PlayStation console. Since we only have the data that shows the reviews of games we will compare the average score of reviews for the Xbox titles vs PlayStation titles.  This might be a subjective way to compare the platforms, but since most of the titles are available for both of the platforms, one can argue that gamers are ranking overall experience which includes the platform.  Both Xbox and PlayStation have multiple versions so we will combine the data to compile sets containing all versions of consoles ( we will exclude the mobile versions of PlayStation) and then setup the following hypothesis test to see if the difference is statistically significant.
+
+#### H0: Mean scores between reviews of xbox titles and Playstation titles are equal
+#### Ha: Mean scores are not equal
+
+```{r}
+xbox = ign[which(ign$platform == 'Xbox'|ign$platform == 'Xbox 360'|ign$platform == 'Xbox One'),]
+playstation = ign[which(ign$platform == 'PlayStation'|ign$platform == 'PlayStation 2'|ign$platform == 'PlayStation 3'|ign$platform == 'PlayStation 4'),]
+t.test(xbox$score, playstation$score)
+```
+
+We can go ahead and reject the null hypothesis and conclude that means of scores are not equal and Xbox titles have a larger mean of scores vs the PlayStation scores.
+
+### Strategy Genre scores
+
+Next I want to take a look at strategy games. I have a suspicion that the average reviews of the strategy games will be higher then the overall mean of the scores. In order to test this theory we will setup the following hypotheses:
+
+#### H0: Mean scores of STrategy games equals the overal mean of the games
+#### Ha: Mean scores are not equal
+
+```{r}
+strategy = ign[which(ign$genre_primary == 'Strategy'),]
+t.test(ign$score, strategy$score)
+```
+
+It appears that we can reject the Null hypotheses and conclude that the means of the scores are not equal and that Strategy games on average have higher scores of reviews then games in general.
+
+### Scores by Game Genre
+
+Next I want to take a look at all game genres and relatively compare their mean scores
+
+```{r}
+bygroup_genre = aggregate(x=ign$score, by=list(ign$genre_primary), FUN = mean)
+count_genre = aggregate(x=ign$score, by=list(ign$genre_primary), FUN = length)
+bygroup_genre$count = count_genre$x
+bygroup_genre = bygroup_genre[order(bygroup_genre$count),c(1,2,3)]
+bygroup_genre= tail(bygroup_genre, 10)
+colnames(bygroup_genre)<- c("genre","score","count")
+
+p = ggplot(bygroup_genre, aes(x=genre, y=score)) + geom_bar(stat='identity',fill = "#0072B2") +ggtitle("Mean review scores by Category")
+ggplotly(p)
+```
+
+We filtered through the set and left only the top 10 genres. It appears that RPG games have the highest scores out of main categories.
+
+## 5. Conclusion
+
+We tested 3 hypotheses and concluded that 
+
+1) Mean scores of reviews have decreased over time. This is explainable by the fact that in 2008-2009 there was a drop in overall ratings and those low ratings are heavily affecting the averages. But it appears that the overall scores have improved greatly since then and if the trend continues we will be looking at overall increase of mean scores of reviews compared to previous periods.
+
+2) Game titles released for Xbox consoles on average rate higher then the PlayStation titles.  this was a bit of a surprise to me as I personally expected the opposite, but there is enough data to support the findings. It could be the fact that the PlayStation gamers are more demanding and expect more from the experience. Also this does not directly suggest that players like Xbox over PlayStation, but it is a very interesting observation.
+
+3) We tested the theory that Strategy games on average have higher scores then games in general and where correct in that assumption.  It should be also noted that strategy games ranked 2nd to RPG games which had the higher relative mean in the top 10 categories.
+
+I want to address an observation made throughout this project  - there was a very interesting spike in a number of games released in 2008 and at the same time we have seen a sharp decline in the mean score of the reviews of the games. Unfortunately we cannot answer definitively why this took place, but after reading a number of articles, I believe I have found a potential reason.  My initial reasoning was that it could have been the recession that affected an overall mood of the consumers, but there is no actual evidence to support that theory, on the contrary gaming industry was one of few recession proof industries and was not affecting by 2008 recession. 
+Another more likely theory is that 2008 was the year when a lot of new technologies and innovation in general where introduced to the gaming market and as it often happens some of the innovations where not fully ready and were met with some criticism from the gaming community and resulted in overall lower review scores. Once the game companies have resolved some of the issues, the mean score started to climb again.  It should be noted that this is just a theory and there is no data to actually suggest that.
+
+Future work - It would be interesting to better understand the reason the average scores dropped in 2008 and to find relevant predictors so that we could build a regression model. For that we would need to find a new data set which would include data such as how much was money invested into a game, how long the development took place, how much was spent on advertising, The company behind the game and so on, I believe that data could better explain some of the variations in the rating scores.

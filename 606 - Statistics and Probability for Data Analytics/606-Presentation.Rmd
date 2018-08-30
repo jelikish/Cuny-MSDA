@@ -1,0 +1,47 @@
+---
+title: "606-Presentation"
+author: "Joseph Elikishvili"
+date: "November 16, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Multiple regression model
+=========================
+
+A multiple regression model is a linear model with many predictors. In general, we write the model as
+
+^y = B0 + B1x1 + B2x2 + · · · + Bkxk
+
+
+
+The adjusted R-squared
+======================
+The adjusted R-squared is a modified version of R-squared that has been adjusted for the number of predictors in the model. The adjusted R-squared increases only if the new term improves the model more than would be expected by chance. It decreases when a predictor improves the model by less than expected by chance.
+
+
+
+
+
+
+
+Problem 8.7 
+===========
+Baby weights, Part IV. Exercise 8.3 considers a model that predicts a newborn's weight using several predictors (gestation length, parity, age of mother, height of mother, weight of mother, smoking status of mother). The table below shows the adjusted R-squared for the full model as well as adjusted R-squared values for all models we evaluate in the first step of the backwards elimination process.
+
+N Model           Adjusted R2
+- -------------   --------------
+1 Fullmodel       0.2541
+2 No gestation    0.1031
+3 No parity       0.2492
+4 No age          0.2547
+5 No height       0.2311
+6 No weight       0.2536
+7 No smokingstatus 0.2072
+
+Which, if any, variable should be removed from the model first?
+
+Since age has R2 higher then full model, it can be eliminated.

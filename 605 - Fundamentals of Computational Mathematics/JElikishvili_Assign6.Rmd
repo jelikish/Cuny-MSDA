@@ -1,0 +1,83 @@
+---
+title: "IS605 Assignment6"
+author: "Joseph Elikishvili"
+date: "March 14, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+
+```
+
+## Problem set 1
+
+```{r}
+# 1. When you roll a fair die 3 times, how many possible outcomes are there?
+X = (1/6)*(1/6)*(1/6) 
+X
+
+#2. What is the probability of getting a sum total of 3 when you roll a die two times?
+
+#Possibilities of getting sum of 3 are 2+1 and 1+2, so we have total of 2 outcomes we are interested in. The total number of possibilities are (1/6)*(1/6) = 1/36.  So the probability of rolling a sum of 3 equals 2/36 = 1/18
+
+X = 2/36
+X
+
+# 3. Assume a room of 25 strangers. What is the probability that two of them have the same birthday? Assume that all birthdays are equally likely and equal to 1=365 each. What happens to this probability when there are 50 people in the room?
+
+# We will use the following formula: n!/k!(n - k)! to find Q(25) or probability that non one of 25 has a dublicate birthday
+
+#Q25 = 364/365*363/365........*341/365
+l=c(341:365)
+Q25=prod(l)/365^25
+P25=1-Q25
+P25
+
+# Same for Q(25)
+l=c(316:365)
+Q50=prod(l)/365^50
+P50=1-Q50
+P50
+
+```
+
+## Problem set 2
+
+```{r}
+library(tm)
+
+lines <- readLines("C:/data/Cuny/assign6.sample.txt", skipNul = TRUE, encoding="UTF-8")
+
+words = paste(lines, collapse = " ")
+source = VectorSource(words)
+corpus = Corpus(source)
+
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, stripWhitespace)
+
+dtm = DocumentTermMatrix(corpus)
+dtm2 = as.matrix(dtm)
+
+count = colSums(dtm2)
+count = sort(count, decreasing = TRUE)
+wordcount = data.frame(count)
+wordcount$prob = wordcount$count/length(count)
+head(wordcount)
+
+
+
+#Using quanteda package to count bigrams
+
+library(quanteda)
+
+bigrams = dfm(words, ngrams = 2, removePunct = TRUE, toLower = TRUE)
+bicount = colSums(bigrams)
+bicount = sort(bicount, decreasing = TRUE)
+bigrams.df = data.frame(bicount)
+bigrams.df$prob = bigrams.df$bicount/length(bicount)
+head(bigrams.df)
+
+```

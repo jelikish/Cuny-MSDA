@@ -1,0 +1,223 @@
+<<<<<<< Updated upstream
+---
+title: "Data607-Project3-R-to-MySQL"
+author: "Bruce Hao"
+date: "October 18, 2016"
+output: html_document
+---
+
+**Step: Importing Scraped Data to MySQL from R (ETL)**  
+
+
+**Summary:**  
+Although the data acquisition, exploration and analysis processes were conducted in R, the data is stored in MySQL to faciliate permanent storage and access. This step is comprised of several sub-steps outlined below:  
+
+* Read data from data acquisition process into data frame (note: in the code below, the data was read in from a csv file, but could just as easily be read in directly from the web scraping output).  
+* Transform data to ready it for import into the correct database tables. In this particular case, there are three tables to house unique roles, locations and keywords, and there are two tables that facilitate the many-to-many relationships.  
+* Create connection to MySQL database and import data into respective tables. 
+
+
+**Future Work:**  
+
+* Add flexibility to import scripts. As is, the scripts below assign primary keys based as 1:n and are thus designed for a one-time import of data. Subsequent incremental imports will fail due to duplicate primary keys. This can be resolved by having the database auto-increment additions and remove duplicates.  
+* Currently, the transform and load process requires 3-4 lines of code for each table. A function could be used to minimize replicating similar code for each database table. The function would need to be flexible enough to deal with different column numbers and names within each table.   
+
+
+**Summary of Code:**  
+
+```{r message=FALSE, warning=FALSE}
+library(stringr)
+library(dplyr)
+library(dbConnect)
+```
+
+* Create connection to database and load acquired data into data frame.
+
+```{r}
+username = 'data607'
+password = 'project3'
+dbname = 'ds_skills'
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com'
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host)
+
+my_data <- read.csv("data.csv", stringsAsFactors = FALSE)
+```
+
+* Remove duplicates and non-SQL-friendly characters from data to be imported  
+* Create primary key (ID) for each unique record to be imported  
+* Create string to house values to be inserted in SQL query  
+* Run INSERT query to import data into SQL  
+* Repeat process for each of the five database tables  
+
+```{r}
+# roles df
+role_desc <- unique(str_replace(my_data$Job_Title, "\\'", ""))  # BH: removed apostrophes for SQL import
+role_id <- seq.int(length(role_desc))
+roles <- data.frame(role_id=role_id,role_desc=role_desc)
+roles = roles %>% mutate(insertValue = paste0("(", role_id, ", '", role_desc, "')"))
+insertValues = paste(unlist(roles$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO roles VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# location df
+locations <- unique(my_data[,c("City","State")])
+locations <- cbind(loc_id =  seq.int(nrow(locations)), locations)
+locations = locations %>% mutate(insertValue = paste0("(", loc_id, ", '", City, "', '", State, "')"))
+insertValues = paste(unlist(locations$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO locations VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# keywords df
+key_list <- unlist(str_split(tolower(my_data$keywordtag),","))
+key_desc <- unique(key_list[key_list!=""])
+key_id <- seq.int(length(key_desc))
+keywords <- data.frame(key_id = key_id, key_desc = key_desc)
+keywords = keywords %>% mutate(insertValue = paste0("(", key_id, ", '", key_desc, "')"))
+insertValues = paste(unlist(keywords$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO keywords VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# post_keys df
+key_list <- str_split(tolower(my_data$keywordtag),",")
+key_list <- lapply(key_list,unique)
+post_id = integer(); key_desc = character()
+for (i in 1:length(key_list)){
+  for (j in 1:length(key_list[[i]])) {
+    post_id <- append(post_id,i)
+    key_desc <- append(key_desc,key_list[[i]][[j]])
+  }
+}
+post_keys <- data.frame(post_id = post_id,key_desc = key_desc)
+post_keys <- filter(post_keys, key_desc != "" & key_desc !=" ")
+post_keys <- merge(keywords, post_keys, by = "key_desc")
+post_keys <- subset(post_keys, select = c(post_id, key_id))
+post_keys = post_keys %>% mutate(insertValue = paste0("(", post_id, ", '", key_id, "')"))
+insertValues = paste(unlist(post_keys$insertValue), collapse = ', ')
+# insertQry = dbSendQuery(myDb, paste0("INSERT INTO post_keys VALUES ", insertValues, ";"))
+# fetch(insertQry, n = -1)
+
+# jobs df
+jobs <- my_data
+names(jobs)[names(jobs)=="Job_Title"] <- "role_desc"
+names(jobs)[names(jobs)=="X.1"] <- "post_id"
+jobs <- merge(jobs, roles, by ="role_desc")
+jobs <- merge(jobs, locations, by= c("City","State"))
+jobs <- subset(jobs, select= c(post_id,role_id,loc_id))
+jobs = jobs %>% mutate(insertValue = paste0("(", post_id, ", ", role_id, ", ", loc_id, ")"))
+insertValues = paste(unlist(jobs$insertValue), collapse = ', ')
+# insertQry = dbSendQuery(myDb, paste0("INSERT INTO jobs VALUES ", insertValues, ";"))
+# fetch(insertQry, n = -1)
+```
+
+=======
+---
+title: "Data607-Project3-R-to-MySQL"
+author: "Bruce Hao"
+date: "October 18, 2016"
+output: html_document
+---
+
+**Step: Importing Scraped Data to MySQL from R (ETL)**  
+
+
+**Summary:**  
+Although the data acquisition, exploration and analysis processes were conducted in R, the data is stored in MySQL to faciliate permanent storage and access. This step is comprised of several sub-steps outlined below:  
+
+* Read data from data acquisition process into data frame (note: in the code below, the data was read in from a csv file, but could just as easily be read in directly from the web scraping output).  
+* Transform data to ready it for import into the correct database tables. In this particular case, there are three tables to house unique roles, locations and keywords, and there are two tables that facilitate the many-to-many relationships.  
+* Create connection to MySQL database and import data into respective tables. 
+
+
+**Future Work:**  
+
+* Add flexibility to import scripts. As is, the scripts below assign primary keys based as 1:n and are thus designed for a one-time import of data. Subsequent incremental imports will fail due to duplicate primary keys. This can be resolved by having the database auto-increment additions and remove duplicates.  
+* Currently, the transform and load process requires 3-4 lines of code for each table. A function could be used to minimize replicating similar code for each database table. The function would need to be flexible enough to deal with different column numbers and names within each table.   
+
+
+**Summary of Code:**  
+
+```{r message=FALSE, warning=FALSE}
+library(stringr)
+library(dplyr)
+library(dbConnect)
+```
+
+* Create connection to database and load acquired data into data frame.
+
+```{r}
+username = 'data607'
+password = 'project3'
+dbname = 'ds_skills'
+host = 'data607-project3.ce2dfe0qxt5q.us-west-2.rds.amazonaws.com'
+myDb = dbConnect(MySQL(), user=username, password=password, dbname=dbname, host=host)
+
+my_data <- read.csv("data.csv", stringsAsFactors = FALSE)
+```
+
+* Remove duplicates and non-SQL-friendly characters from data to be imported  
+* Create primary key (ID) for each unique record to be imported  
+* Create string to house values to be inserted in SQL query  
+* Run INSERT query to import data into SQL  
+* Repeat process for each of the five database tables  
+
+```{r}
+# roles df
+role_desc <- unique(str_replace(my_data$Job_Title, "\\'", ""))  # BH: removed apostrophes for SQL import
+role_id <- seq.int(length(role_desc))
+roles <- data.frame(role_id=role_id,role_desc=role_desc)
+roles = roles %>% mutate(insertValue = paste0("(", role_id, ", '", role_desc, "')"))
+insertValues = paste(unlist(roles$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO roles VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# location df
+locations <- unique(my_data[,c("City","State")])
+locations <- cbind(loc_id =  seq.int(nrow(locations)), locations)
+locations = locations %>% mutate(insertValue = paste0("(", loc_id, ", '", City, "', '", State, "')"))
+insertValues = paste(unlist(locations$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO locations VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# keywords df
+key_list <- unlist(str_split(tolower(my_data$keywordtag),","))
+key_desc <- unique(key_list[key_list!=""])
+key_id <- seq.int(length(key_desc))
+keywords <- data.frame(key_id = key_id, key_desc = key_desc)
+keywords = keywords %>% mutate(insertValue = paste0("(", key_id, ", '", key_desc, "')"))
+insertValues = paste(unlist(keywords$insertValue), collapse = ', ')
+#insertQry = dbSendQuery(myDb, paste0("INSERT INTO keywords VALUES ", insertValues, ";"))
+#fetch(insertQry, n = -1)
+
+# post_keys df
+key_list <- str_split(tolower(my_data$keywordtag),",")
+key_list <- lapply(key_list,unique)
+post_id = integer(); key_desc = character()
+for (i in 1:length(key_list)){
+  for (j in 1:length(key_list[[i]])) {
+    post_id <- append(post_id,i)
+    key_desc <- append(key_desc,key_list[[i]][[j]])
+  }
+}
+post_keys <- data.frame(post_id = post_id,key_desc = key_desc)
+post_keys <- filter(post_keys, key_desc != "" & key_desc !=" ")
+post_keys <- merge(keywords, post_keys, by = "key_desc")
+post_keys <- subset(post_keys, select = c(post_id, key_id))
+post_keys = post_keys %>% mutate(insertValue = paste0("(", post_id, ", '", key_id, "')"))
+insertValues = paste(unlist(post_keys$insertValue), collapse = ', ')
+# insertQry = dbSendQuery(myDb, paste0("INSERT INTO post_keys VALUES ", insertValues, ";"))
+# fetch(insertQry, n = -1)
+
+# jobs df
+jobs <- my_data
+names(jobs)[names(jobs)=="Job_Title"] <- "role_desc"
+jobs$post_id <-seq.int(nrow(jobs))
+jobs <- merge(jobs, roles, by ="role_desc")
+jobs <- merge(jobs, locations, by= c("City","State"))
+jobs <- subset(jobs, select= c(post_id,role_id,loc_id))
+jobs = jobs %>% mutate(insertValue = paste0("(", post_id, ", ", role_id, ", ", loc_id, ")"))
+insertValues = paste(unlist(jobs$insertValue), collapse = ', ')
+# insertQry = dbSendQuery(myDb, paste0("INSERT INTO jobs VALUES ", insertValues, ";"))
+# fetch(insertQry, n = -1)
+```
+
+>>>>>>> Stashed changes

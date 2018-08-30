@@ -1,0 +1,158 @@
+---
+title: "606-FinalExam"
+author: "Joseph Elikishvili"
+date: "December 9, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part I
+
+a) The distribution on the left is unimodal and skewed to the right and the distributioj on the right appears to be normal ( maybe just slightly skewed to the left but its so insignificant that can be ignored).  There is clearly higher spread in distribution on the left which we can tell from just looking on the scale and when comparing the standard deviations between the 2 distributions.
+
+b) The mean could be the same because of the way it is calculated, for instance if we look at the mean between 2 numbers ( 5,5) and (1,9) it wil be the same, but the variability will be very different, so you could have a set of highly variable numbers and a set of not so variable numbers, but they could have the same mean, but the standard deviation which measures the variablility in the data set will be different and that is exactly the case we are observing.
+
+c) Central limit Theorem.
+
+
+
+## Part II
+```{r}
+options(digits=2)
+data1 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(8.04,6.95,7.58,8.81,8.33,9.96,7.24,4.26,10.84,4.82,5.68))
+data2 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(9.14,8.14,8.74,8.77,9.26,8.1,6.13,3.1,9.13,7.26,4.74))
+data3 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(7.46,6.77,12.74,7.11,7.81,8.84,6.08,5.39,8.15,6.42,5.73))
+data4 <- data.frame(x=c(8,8,8,8,8,8,8,19,8,8,8),
+y=c(6.58,5.76,7.71,8.84,8.47,7.04,5.25,12.5,5.56,7.91,6.89))
+```
+
+a. Calculating the means
+```{r}
+mean(data1$x)
+mean(data1$y)
+mean(data2$x)
+mean(data2$y)
+mean(data3$x)
+mean(data3$y)
+mean(data4$x)
+mean(data4$y)
+```
+
+b. Calculating the meadians
+
+```{r}
+median(data1$x)
+median(data1$y)
+median(data2$x)
+median(data2$y)
+median(data3$x)
+median(data3$y)
+median(data4$x)
+median(data4$y)
+```
+
+c. Calculating Standard Deviations
+
+```{r}
+round(sd(data1$x), 2)
+round(sd(data1$y), 2)
+round(sd(data2$x), 2)
+round(sd(data2$y), 2)
+round(sd(data3$x), 2)
+round(sd(data3$y), 2)
+round(sd(data4$x), 2)
+round(sd(data4$y), 2)
+```
+
+d. Calculating correclations
+
+```{r}
+cor(data1$x, data1$y)
+cor(data2$x, data2$y)
+cor(data3$x, data3$y)
+cor(data4$x, data4$y)
+```
+
+e. Finding Linear equasions
+
+```{r}
+m1 = lm(x~y, data=data1)
+summary(m1)
+m2 = lm(x~y, data=data2)
+summary(m2)
+m3 = lm(x~y, data=data3)
+summary(m3)
+m4 = lm(x~y, data=data4)
+summary(m4)
+```
+
+data1:  y = -0.998 + 1.333x
+
+data2:  y = -0.995 + 1.332x
+
+data3:  y = -1.000 + 1.333x
+
+data4:  y = -1.004 + 1.334x
+
+If we approximate to 2 dec points, all 4 sets will have the following equasion:  y = -1 + 1.33x
+
+f. Finding the R-Squared
+
+data1:  0.667
+data2:  0.666
+data3:  0.666
+data4:  0.667
+
+Again if we round to 2 dec points we will get the same awnser for all 4 sets: 0.67
+
+### For each pair, is it appropriate to estimate a linear regression model? Why or why not? Be specific as to why for each pair and include appropriate plots! (4 pts)
+
+To awnser this quesion we need to check the following:
+
+1. Linearity
+2. Nearly normal residuals
+3. Constant Variablity
+4. statistical independence ( we will make assumption that the data is independent)
+
+Lets take a look at the plots
+
+```{r}
+plot(data1)
+plot(data2)
+plot(data3)
+plot(data4)
+```
+
+data1 and data2 ( data2 has 1 outlier, but it does not affect that much as we still have pretty good corelation score.) are linear so linearity checks for them. data3 appears to resamble some sort of quadratic model and does not pass the test, data4 also does not appear to be linear therefore fails the test, so we will continue looking at data1 and data2 sets.
+
+Next we look at residuals.
+
+```{r}
+plot(m1$residuals)
+abline(h = 0, lty = 3)
+hist(m1$residuals)
+qqnorm(m1$residuals)
+qqline(m1$residuals)
+
+plot(m2$residuals)
+abline(h = 0, lty = 3)
+hist(m2$residuals)
+qqnorm(m2$residuals)
+qqline(m2$residuals)
+```
+
+data1: We can see that data1 set has nearly normal residuals and that the variability is constant.
+
+data2: data2 set does not have the constant variability as we can see from the residuals plot (this could be challanged tiny bit), also residuals do not appear to be normal ( this is pretty obvious so really kills any chance for data2) as we can see in the histogram of residuals.
+
+So in conclusion the linear test only appears to be appropriate for data1.
+
+### Explain why it is important to include appropriate visualizations when analyzing data. Include any visualization(s) you create. (2 pts)
+
+As we can see from the plots above, data could have a lot of similar metrics, but could vary greatly and it is important to visualize the data in order to see the whole picture. Each metric only shows one side of the story. Scatter plot seems to be the easiest and fastest way to visualize the data (at least during initial inquiry), it will quickly show the shape of the data and reveal a lot of details. But as we have seen that is not enough we need to also visualise residuals to better understand the type of data we are dealing with. So once making a determination we need to consider all the evidence including statistics and the visual aid and only then we can be certain about our findings.

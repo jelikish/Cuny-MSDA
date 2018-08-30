@@ -1,0 +1,39 @@
+---
+title: "Data 606 Lab2"
+author: "Joseph Elikishvili"
+date: "September 11, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("more/kobe.RData")
+```
+
+#### 1. Describe the distribution of streak lengths. What is the typical streak length for this simulated independent shooter with a 45% shooting percentage? How long is the player's longest streak of baskets in 133 shots?
+
+
+##### Data varies slightly everytime the code runs, 0 gets the highest number which is expected.  1 is more interesting and seems to be biggest of not Null outcomes generating around 20 occurencies. 
+```{r cars}
+outcomes <- c("H", "M")
+sim_basket <- sample(outcomes, size = 133, replace = TRUE, prob = c(0.45, 0.55))
+barplot(table(calc_streak(sim_basket)))
+```
+
+#### 2. If you were to run the simulation of the independent shooter a second time, how would you expect its streak distribution to compare to the distribution from the question above? Exactly the same? Somewhat similar? Totally different? Explain your reasoning.
+
+##### I would have to say somewhat similar which is also expected, while it is possible to get results that are very different the chances of that are pretty low and for most of the time we will get results similar in shape with the above results. Below I am running same test second time.
+
+```{r}
+sim_basket <- sample(outcomes, size = 133, replace = TRUE, prob = c(0.45, 0.55))
+barplot(table(calc_streak(sim_basket)))
+```
+
+#### 3. How does Kobe Bryant's distribution of streak lengths compare to the distribution of streak lengths for the simulated shooter? Using this comparison, do you have evidence that the hot hand model fits Kobe's shooting patterns? Explain.
+
+##### It does not appear that Kobe Bryant's distribution of streak lengths is significantly different from the generated results. In fact it looks very similar to the generated results and falls within the acceptable range for random shooter. So we do not have evidence that the hot hand model fits Kobe's shooting patterns.  Below is barplot based on Kobe's acutal results
+
+```{r}
+kobe_streak <- calc_streak(kobe$basket)
+barplot(table(kobe_streak))
+```

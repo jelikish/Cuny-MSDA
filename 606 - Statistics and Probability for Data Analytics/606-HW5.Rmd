@@ -1,0 +1,184 @@
+---
+title: "606-HW5"
+author: "Joseph Elikishvili"
+date: "November 13, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 5.6 
+Working backwards, Part II. A 90% confidence interval for a population mean is (65,
+77). The population distribution is approximately normal and the population standard deviation
+is unknown. This confidence interval is based on a simple random sample of 25 observations.
+Calculate the sample mean, the margin of error, and the sample standard deviation.
+
+90% CI = (65,77)
+n = 25
+df=25-1=24
+S = ?
+Mean = ?
+t = qt(.05,24) = 1.71
+
+Mean = 65 + ME
+ME = t*SE
+
+ME = (77-65)/2 = 6
+Mean = 65 + 6 = 71
+
+SE = ME/t 
+SE = 6/1.71 = 3.508
+
+SE = S/SQRT(n) 
+S = SE*SQRT(n)
+S = 3.508*5 = 17.54
+
+Awnser: Mean = 71, S = 17.54 
+
+
+## 5.14
+
+
+5.14 SAT scores. SAT scores of students at an Ivy League college are distributed with a
+standard deviation of 250 points. Two statistics students, Raina and Luke, want to estimate the
+average SAT score of students at this college as part of a class project. They want their margin of
+error to be no more than 25 points.
+(a) Raina wants to use a 90% confidence interval. How large a sample should she collect?
+(b) Luke wants to use a 99% confidence interval. Without calculating the actual sample size,
+determine whether his sample should be larger or smaller than Raina's, and explain your
+reasoning.
+(c) Calculate the minimum required sample size for Luke.
+
+n = (SD*z/ME)^2
+
+a) SD = 250, z(.05) = 1.31, ME = 25.  n = (250*1.31/25)^2 = 171.61 = 172.
+b) n will increase. Mathimatically - Since we are multipling  SD by z and z value will increase, so overall value will increae, Also its just logical tht we need larger sample data to achive more precise estimates.
+c) n = (250*2.58/25)^2 = 665.64 = 666.
+
+
+
+
+
+
+## 5.20
+
+5.20 High School and Beyond, Part I. The National Center of Education Statistics conducted
+a survey of high school seniors, collecting test data on reading, writing, and several other subjects.
+Here we examine a simple random sample of 200 students from this survey. Side-by-side box plots
+of reading and writing scores as well as a histogram of the di???erences in scores are shown below.
+
+(a) Is there a clear di???erence in the average reading and writing scores?
+- Yes, the writing scores have a higher mean the reading scores.
+
+(b) Are the reading and writing scores of each student independent of each other?
+- The cores are part of one study and conducted on the same 200 students, so I would say they are dependent on each other.
+(c) Create hypotheses appropriate for the following research question: is there an evident di???erence
+in the average scores of students in the reading and writing exam?
+H0 - There is no difference bewteen reading and writing socres
+Ha - There is a difference between the two scores.
+
+(d) Check the conditions required to complete this test.
+- n>30
+- Normality test would pass
+
+(e) The average observed di???erence in scores is ¯xread???write = ???0.545, and the standard deviation
+of the di???erences is 8.887 points. Do these data provide convincing evidence of a di???erence between the average scores on the two exams?
+
+se=SDdiff/SQRT(ndiff) = 8.8887/sqrt(200) = 0.6285
+t = 0+0.545/0.6258 = 0.87
+df=200-1=199
+pt(0.87, df=199) = 0.8073257
+p value is > 0.05, so we fail to reject H0 and conclude that there is not enough proof to think there is a difference.
+
+(f) What type of error might we have made? Explain what the error means in the context of the
+application.
+
+- If we made an error, that means we rejected the H0, so its a Type II error, which means we claimed there is a difference, while there isn't
+
+(g) Based on the results of this hypothesis test, would you expect a confidence interval for the
+average di???erence between the reading and writing scores to include 0? Explain your reasoning.
+
+- Yes I would expect a 0 to be within the range. IF we take 1SD range of the mean difference we will include a 0, in fact we don;t even need a 1SD as -0.545 is pretty close to the 0.
+
+## 5.32
+
+Each year the US Environmental Protection Agency (EPA) releases fuel economy data on cars manufactured in that year.
+Below are summary statistics on fuel efficiency (in miles/gallon) from random samples of cars with
+manual and automatic transmissions manufactured in 2012. Do these data provide strong evidence
+of a di???erence between the average fuel efficiency of cars with manual and automatic transmissions
+in terms of their average city mileage? Assume that conditions for inference are satisfied.
+
+#### H0 - there is no difference
+
+#### Ha - there is a difference
+
+```{r}
+n=26
+m1=16.2
+sd1=3.58
+m2=19.85
+sd2=4.51
+
+mean=m1-m2
+se=sqrt(((sd1^2)/26)+((sd2^2)/26))
+t=(mean-0)/se
+pt(t, df=25)
+```
+
+based on the fact that p<0.05, we reject the null hypotheses and conclude that there is a difference in fuel effisiencey between cars with manual and automatic transmitions.
+
+
+## 5.48 
+
+Work hours and education. The General Social Survey collects data on demographics,
+education, and work, among many other characteristics of US residents.47 Using ANOVA, we can
+consider educational attainment levels for all 1,172 respondents at once. Below are the distributions
+of hours worked by educational attainment and relevant summary statistics that will be helpful in
+carrying out this analysis.
+
+
+(a) Write hypotheses for evaluating whether the average number of hours worked varies across the
+five groups.
+
+
+#### H0 - the means are not different
+#### Ha - at least one of the means is different from others
+
+(b) Check conditions and describe any assumptions you must make to proceed with the test.
+1. Independence - the data seems to be independent
+2. Approximately normal - the data seems to be approximately normally distributed
+3. Constant Variance - data seems to have variability approximately with the same range
+
+(c) Below is part of the output associated with this test. Fill in the empty cells.
+
+```{r}
+DFe = 1172-5
+DFg = 5-1
+
+n=c(121,546,97,253,155) 
+SD=c(15.81,14.97,18.1,13.62,15.51)
+MEAN=c(38.67,39.6,41.39,42.55,40.85)
+
+SSG = sum(n*(MEAN-40.45)^2)
+MSG = (1/DFg)*SSG
+SSE=267382
+MSE=SSE/DFe
+MSE
+
+f = MSG/MSE
+f
+```
+
+degree = 1167
+residual = 4
+total_df = 1167+4=1171
+SSG=2004.1
+total_SS = 2004.1+267382=269386.1
+MSE=229.12
+f=2.187
+
+(d) What is the conclusion of the test?
+
+p=0.0682>0.05, therefore we do not have enough evidence to reject H0 and do not have enough evidence to suggest that the means are different.
